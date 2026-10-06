@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>身體組成總體報告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --teal:#069494; --teal-ink:#04706f; --teal-tint:#e4f4f3;
+  --orange:#FF8243; --orange-ink:#ad4a17; --orange-tint:#fff0e6;
+  --pink:#FFC0CB; --pink-tint:#fff0f2;
+  --yellow:#FCE883; --yellow-tint:#fffbe2;
+  --ink:#1c2a2e; --ink2:#46565b; --muted:#6f7e82; --line:#e3e8e7; --grid:#edf0ef;
+  --surface:#f7f8f7; --card:#ffffff;
+  --font:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC","WenQuanYi Zen Hei",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.65}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px 48px}
+.stripe{display:flex;height:8px}.stripe i{flex:1}
+header.hero{background:var(--card);border-bottom:1px solid var(--line)}
+header.hero .wrap{padding-top:28px;padding-bottom:24px}
+.eyebrow{font-size:13px;color:var(--teal-ink);font-weight:700;letter-spacing:.08em}
+h1{font-size:30px;line-height:1.3;margin:6px 0 10px;font-weight:700}
+.meta{display:flex;flex-wrap:wrap;gap:6px 22px;color:var(--ink2);font-size:14px}
+.meta b{color:var(--ink);font-weight:500}
+section{margin-top:28px}
+h2{font-size:21px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+h2 .num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--teal);color:#fff;font-size:14px;flex:none}
+.sub{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:820px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}h1{font-size:24px}}
+
+/* 總體評價 */
+.verdict{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:linear-gradient(90deg,var(--teal-tint),var(--card));border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:14px}
+.verdict .lab{font-size:13px;color:var(--ink2)}
+.verdict .big{font-size:26px;font-weight:700}
+.verdict p{margin:0;flex:1;min-width:240px;color:var(--ink2);font-size:14px}
+.finding h3,.rec h3{font-size:16px;margin:0 0 6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.finding p,.rec p{margin:0;font-size:14.5px;color:var(--ink2)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;line-height:1.6;white-space:nowrap}
+.chip.high{background:var(--pink-tint);color:var(--orange-ink);border:1px solid var(--pink)}
+.chip.mid{background:var(--yellow-tint);color:#7a6400;border:1px solid var(--yellow)}
+.chip.low{background:var(--teal-tint);color:var(--teal-ink);border:1px solid #bfe3e1}
+.chip.ns{background:#f1f3f3;color:var(--muted);border:1px solid var(--line)}
+.rec{border-left:4px solid var(--orange);padding:12px 16px;background:var(--card);border-radius:0 12px 12px 0;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.rec:nth-child(5n+2){border-left-color:var(--teal)}
+.rec:nth-child(5n+3){border-left-color:#e8c93a}
+.rec:nth-child(5n+4){border-left-color:#f59aa9}
+.sources{font-size:12.5px;color:var(--muted);margin:12px 0 0;padding-left:18px}
+
+/* 統計卡 */
+.tile .lab{font-size:13px;color:var(--ink2)}
+.tile .val{font-size:30px;font-weight:700;line-height:1.25;margin-top:2px}
+.tile .val small{font-size:14px;font-weight:500;color:var(--ink2);margin-left:3px}
+.tile .note{font-size:12.5px;color:var(--muted)}
+.kpi .row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kpi .from{color:var(--ink2);font-size:14px}
+.kpi .to{font-size:24px;font-weight:700}
+.kpi .delta{font-size:13.5px;margin-top:4px;color:var(--ink2)}
+
+/* 篩選列 */
+.filters{position:sticky;top:0;z-index:5;background:rgba(247,248,247,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:28px -16px 0;padding:10px 16px}
+.filters .in{max-width:1080px;margin:0 auto;display:flex;gap:10px 22px;flex-wrap:wrap;align-items:center}
+.fgroup{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fgroup>span{font-size:13px;color:var(--ink2);font-weight:500}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{font:inherit;font-size:13.5px;border:0;background:none;color:var(--ink2);padding:4px 12px;border-radius:7px;cursor:pointer;min-height:30px}
+.seg button[aria-pressed=true]{background:var(--teal);color:#fff;font-weight:500}
+.seg button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.ncount{font-size:13.5px;color:var(--ink2);margin-left:auto}
+.ncount b{color:var(--ink)}
+.suppress{background:var(--yellow-tint);border:1px dashed #e8c93a;border-radius:12px;padding:16px;color:#6b5800;font-size:14.5px}
+
+/* 表格 */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--ink2);background:#f5f7f6;font-size:12.5px;vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+td.name{font-weight:500;color:var(--ink)}
+td.name small{color:var(--muted);font-weight:400;margin-left:4px}
+tr.sig td{background:#fbfefe}
+tr.sig td.p-sel{font-weight:700;color:var(--ink)}
+.p-sel{color:var(--ink)} .p-alt{color:var(--muted)}
+.ci{display:block;font-size:11.5px;color:var(--muted);font-weight:400}
+table.left td,table.left th{text-align:left}
+.foot{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+/* 圖表 */
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--font);fill:var(--ink2);font-size:12px}
+.chart .t-ink{fill:var(--ink)} .chart .t-mut{fill:var(--muted)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin:0 0 6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend i.dot{border-radius:50%}
+.legend i.ring{border-radius:50%;background:#fff!important;border:2px solid var(--teal)}
+#tip{position:fixed;pointer-events:none;z-index:20;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 22px rgba(20,40,40,.14);padding:9px 12px;font-size:12.5px;line-height:1.55;color:var(--ink);opacity:0;transition:opacity .08s;max-width:280px}
+#tip b{font-weight:700}
+.picker{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+select{font:inherit;font-size:14px;padding:6px 10px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);min-height:36px}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 20px}
+summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
+.method dl{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;margin:0;font-size:14px}
+.method dt{color:var(--ink2);font-weight:500}.method dd{margin:0;color:var(--ink2)}
+@media (max-width:560px){.method dl{grid-template-columns:1fr}.method dd{margin-bottom:6px}}
+.print-only{display:none}
+.footer{margin-top:36px;font-size:12.5px;color:var(--muted);text-align:center}
+
+/* ── A4 直式列印版型 ── */
+@page{size:A4 portrait;margin:14mm 13mm 16mm}
+@media print{
+  body{background:#fff;font-size:10.5pt;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{max-width:none;padding:0}
+  .filters,.no-print,#tip{display:none!important}
+  .print-only{display:block}
+  header.hero .wrap{padding:0 0 10px}
+  header.hero{border:0}
+  h1{font-size:21pt}
+  h2{font-size:14pt}
+  section{margin-top:14px;break-inside:auto}
+  .card,.rec,.finding,.tile,.verdict,table,tr,.chart,details{break-inside:avoid}
+  .pb{break-before:page}
+  .card{padding:10px 12px;border-radius:8px}
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tile .val{font-size:18pt}
+  .kpi .to{font-size:15pt}
+  table{font-size:8.6pt} th{font-size:8pt} th,td{padding:3.5px 5px}
+  details{border:0;padding:0} details>summary{list-style:none;font-size:14pt;font-weight:700;padding:0 0 6px}
+  details>summary::-webkit-details-marker{display:none}
+  .tbl-wrap{overflow:visible}
+  .ci{display:inline;font-size:7.4pt;margin-left:4px}
+  .ci::before{content:"("}.ci::after{content:")"}
+  .chip{font-size:7.4pt;padding:0 6px}
+  .nobreak-print{break-before:auto!important}
+  #s-forest .chart svg{max-height:120mm}
+  #s-overview,#s-kpi,#s-table,#s-cat{break-inside:avoid}
+  .rec h3,.finding h3{font-size:11pt}
+}
+</style>
+</head>
+<body>
+<div class="stripe" aria-hidden="true"><i style="background:#FF8243"></i><i style="background:#FFC0CB"></i><i style="background:#FCE883"></i><i style="background:#069494"></i></div>
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">TANITA 身體組成分析 ・ 總體報告</div>
+    <h1 id="title">職場身體組成前後測總體報告</h1>
+    <div class="meta" id="meta"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 1 總體評價與建議 -->
+  <section id="s-eval">
+    <h2><span class="num">1</span>總體評價與建議</h2>
+    <p class="sub">依據衛生福利部國民健康署現行公告之健康體位標準與健康生活建議，以全體受測者彙總資料評估（不呈現個人資料）。</p>
+    <div class="verdict" id="verdict"></div>
+    <div class="grid g2" id="findings"></div>
+    <h3 style="font-size:17px;margin:22px 0 10px">建議事項</h3>
+    <div class="grid g2" id="recs"></div>
+    <ol class="sources" id="sources"></ol>
+  </section>
+
+  <!-- 2 受測概況 -->
+  <section id="s-overview">
+    <h2><span class="num">2</span>受測概況</h2>
+    <p class="sub" id="ov-sub"></p>
+    <div class="grid g4" id="ov-tiles"></div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><div style="font-weight:500;margin-bottom:6px">完成前後測者組成（人）</div><div class="tbl-wrap" id="ov-comp"></div></div>
+      <div class="card"><div style="font-weight:500;margin-bottom:6px">資料處理說明</div><ul id="ov-log" style="margin:0;padding-left:18px;font-size:14px;color:var(--ink2)"></ul></div>
+    </div>
+  </section>
+
+  <div class="filters" role="region" aria-label="篩選條件">
+    <div class="in">
+      <div class="fgroup"><span>性別</span><div class="seg" id="f-sex"></div></div>
+      <div class="fgroup"><span>年齡層</span><div class="seg" id="f-age"></div></div>
+      <div class="ncount" id="f-n"></div>
+    </div>
+  </div>
+  <p class="print-only foot" id="print-scope"></p>
+
+  <!-- 3 重點指標 -->
+  <section id="s-kpi">
+    <h2><span class="num">3</span>重點指標前後測變化</h2>
+    <p class="sub">數值為完成前後測者的平均值；p 值依變化量的常態性檢定結果，採配對 t 檢定或 Wilcoxon 符號等級檢定。</p>
+    <div id="kpi-body"></div>
+  </section>
+
+  <!-- 4 森林圖 -->
+  <section id="s-forest" class="pb">
+    <h2><span class="num">4</span>各指標變化率</h2>
+    <p class="sub">平均變化量占前測平均值的百分比，橫線為 95% 信賴區間；實心點表示達統計顯著（p &lt; 0.05）。</p>
+    <div class="card"><div class="legend"><span><i class="dot" style="background:var(--teal)"></i>達顯著（p &lt; 0.05）</span><span><i class="ring"></i>未達顯著</span></div><div class="chart" id="forest"></div></div>
+  </section>
+
+  <!-- 5 比較表 -->
+  <section id="s-table">
+    <h2><span class="num">5</span>前後測比較表</h2>
+    <p class="sub">平均值 ± 標準差；變化量 = 後測 − 前測。粗體 p 值為判定依據。</p>
+    <div class="card"><div class="tbl-wrap" id="main-table"></div><div class="foot" id="main-foot"></div></div>
+  </section>
+
+  <!-- 互動：單一指標 -->
+  <section id="s-single" class="no-print">
+    <h2><span class="num">◎</span>單一指標檢視</h2>
+    <p class="sub">選擇一項指標，查看目前篩選對象的前後測平均值，以及各分層的變化量比較。</p>
+    <div class="picker"><label for="ind-sel" style="font-size:14px;color:var(--ink2)">指標</label><select id="ind-sel"></select></div>
+    <div class="grid g2">
+      <div class="card"><div style="font-weight:500">前後測平均值與 95% 信賴區間</div><div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--teal)"></i>前測</span><span><i class="dot" style="background:var(--orange)"></i>後測</span></div><div class="chart" id="single-dumbbell"></div><div class="foot" id="single-foot"></div></div>
+      <div class="card"><div style="font-weight:500">各分層的平均變化量（95% 信賴區間）</div><div class="foot" style="margin:2px 0 6px" id="strata-note">不受上方篩選影響。</div><div class="chart" id="single-strata"></div></div>
+    </div>
+  </section>
+
+  <!-- 6 健康分級 -->
+  <section id="s-cat">
+    <h2><span class="num">6</span>健康分級分布變化</h2>
+    <p class="sub">完成前後測者於兩次量測的分級人數分布。分級變化採 McNemar 精確檢定（二分類）與 Bowker 對稱性檢定（多分類）。</p>
+    <div class="grid g2">
+      <div class="card"><div style="font-weight:500">BMI 分級（國民健康署成人健康體位標準）</div><div class="legend" id="lg-bmi" style="margin-top:6px"></div><div class="chart" id="cat-bmi"></div><div class="foot" id="cat-bmi-foot"></div></div>
+      <div class="card"><div style="font-weight:500">內臟脂肪等級（TANITA 原廠標準）</div><div class="legend" id="lg-vfat" style="margin-top:6px"></div><div class="chart" id="cat-vfat"></div><div class="foot" id="cat-vfat-foot"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">風險分類人數變化（McNemar 精確檢定）</div><div class="tbl-wrap" id="bin-table"></div><div class="foot">改善＝前測屬該分類、後測已脫離；惡化＝前測未屬該分類、後測屬之。</div></div>
+  </section>
+
+  <!-- 7 分層 -->
+  <section id="s-strata" class="pb">
+    <h2><span class="num">7</span>分層分析：性別與年齡層</h2>
+    <p class="sub">各分層的平均變化量（95% 信賴區間），以及分層之間變化量是否有差異。本節以完成前後測者全體為基礎，不受篩選影響。</p>
+    <div class="card"><div class="tbl-wrap" id="strata-sex"></div></div>
+    <div class="card" style="margin-top:14px"><div class="tbl-wrap" id="strata-age"></div><div class="foot">組間比較：性別採 Welch t 檢定與 Mann-Whitney U 檢定；年齡層採單因子變異數分析與 Kruskal-Wallis 檢定。* p &lt; 0.05、** p &lt; 0.01、*** p &lt; 0.001。</div></div>
+  </section>
+
+  <!-- 8 卡方 -->
+  <section id="s-chisq" class="pb">
+    <h2><span class="num">8</span>基線風險分布：卡方檢定</h2>
+    <p class="sub">以前測全體受測者，檢定各風險分類的比例在性別、年齡層之間是否不同。期望次數小於 5 的格子超過 20% 時，以 Fisher 精確檢定為判定依據。</p>
+    <div class="card"><div class="tbl-wrap" id="chisq-table"></div></div>
+    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">樣本代表性：完成前後測者 vs. 僅完成前測者（前測值比較）</div><div class="tbl-wrap" id="att-table"></div><div class="foot" id="att-foot"></div></div>
+  </section>
+
+  <!-- 9 分節 -->
+  <section id="s-seg" class="pb">
+    <details id="seg-details">
+      <summary>9　分節身體組成（左右手、左右腳、軀幹）</summary>
+      <p class="sub">依目前篩選條件呈現。平均值 ± 標準差；判定依據同第 5 節。</p>
+      <div class="tbl-wrap" id="seg-table"></div>
+    </details>
+  </section>
+
+  <!-- 10 方法 -->
+  <section id="s-method" class="pb method">
+    <h2><span class="num">10</span>方法、名詞與限制</h2>
+    <div class="card" id="method"></div>
+    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">指標名詞與單位（對照 TANITA MC-780 報告）</div><div class="tbl-wrap" id="glossary"></div></div>
+  </section>
+  <div class="footer" id="footer"></div>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+(function(){
+const R = JSON.parse(document.getElementById('data').textContent);
+const PRINT = /[?&]print\b/.test(location.search);
+const C = {teal:'#069494', orange:'#FF8243', pink:'#FFC0CB', yellow:'#FCE883', ink:'#1c2a2e', ink2:'#46565b', muted:'#6f7e82', grid:'#edf0ef', line:'#e3e8e7', axis:'#c9d1cf'};
+const MAIN = R.fields.main, SEG = R.fields.seg, BIN = R.fields.binary;
+const F = Object.fromEntries([...MAIN, ...SEG].map(f => [f.code, f]));
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fx = (v, d) => v == null ? '—' : Number(v).toLocaleString('zh-TW', {minimumFractionDigits: d, maximumFractionDigits: d});
+const sgn = (v, d) => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '±') + fx(Math.abs(v), d);
+const pf = p => p == null ? '—' : p < 0.001 ? '< 0.001' : p.toFixed(3);
+const stars = p => p == null ? '' : p < 0.001 ? '***' : p < 0.01 ? '**' : p < 0.05 ? '*' : '';
+const dd = f => Math.max(f.dec, 1) + 1; // 平均值多顯示一位
+const state = {sex: 'all', age: 'all', ind: 'FATP'};
+
+/* ---------- 標頭 ---------- */
+const I = R.info;
+document.title = (I.workplace ? I.workplace + ' ' : '') + '身體組成總體報告';
+$('title').textContent = (I.workplace ? I.workplace + '｜' : '') + '職場身體組成前後測總體報告';
+$('meta').innerHTML = [
+  ['前測', I.pre_date], ['後測', I.post_date], ['間隔', I.interval_days + ' 天'], ['儀器', 'TANITA ' + I.model], ['完成前後測', I.n_paired + ' 人']
+].map(([k, v]) => `<span>${k}　<b>${esc(v)}</b></span>`).join('');
+
+/* ---------- 1 總體評價 ---------- */
+const E = R.evaluation;
+const lvlName = {high: '需介入', mid: '需關注', low: '良好'};
+const ovLvl = E.overall === '需優先介入' ? 'high' : E.overall === '需持續關注' ? 'mid' : 'low';
+$('verdict').innerHTML = `<div><div class="lab">總體評價</div><div class="big">${esc(E.overall)}</div></div>
+  <span class="chip ${ovLvl}">${ovLvl === 'high' ? '▲' : ovLvl === 'mid' ? '●' : '✓'} ${lvlName[ovLvl]}</span>
+  <p>${esc(E.rule)}</p>`;
+$('findings').innerHTML = E.findings.map(f => `<div class="card finding"><h3>${esc(f.title)} <span class="chip ${f.level}">${f.level === 'high' ? '▲' : f.level === 'mid' ? '●' : '✓'} ${lvlName[f.level]}</span></h3><p>${esc(f.text)}</p></div>`).join('');
+$('recs').innerHTML = E.recommendations.map(r => `<div class="rec"><h3>${esc(r.title)}</h3><p>${esc(r.text)}</p></div>`).join('');
+$('sources').innerHTML = E.sources.map(s => `<li>${esc(s)}</li>`).join('');
+
+/* ---------- 2 概況 ---------- */
+$('ov-sub').textContent = `原始資料 ${I.n_records} 筆、${I.n_people} 人。統計分析以「前後測皆完成」的 ${I.n_paired} 人為對象。`;
+const tile = (lab, val, unit, note) => `<div class="card tile"><div class="lab">${lab}</div><div class="val">${val}<small>${unit}</small></div><div class="note">${note || ''}</div></div>`;
+const CP = R.composition;
+$('ov-tiles').innerHTML = tile('前測人數', I.n_pre, '人', I.pre_date) + tile('後測人數', I.n_post, '人', I.post_date)
+  + tile('完成前後測', I.n_paired, '人', `僅前測 ${I.n_pre_only} 人、僅後測 ${I.n_post_only} 人`)
+  + tile('平均年齡', fx(CP.age_mean, 1), '歲', `標準差 ${fx(CP.age_sd, 1)}，範圍 ${CP.age_min}–${CP.age_max} 歲`);
+{
+  const ages = ['<30', '30-39', '≥40'];
+  let h = '<table><thead><tr><th>性別</th>' + ages.map(a => `<th>${a} 歲</th>`).join('') + '<th>合計</th></tr></thead><tbody>';
+  for (const [k, lab] of [['sex:M', '男性'], ['sex:F', '女性']]) {
+    const tot = R.strata[k].n;
+    h += `<tr><td>${lab}</td>` + ages.map(a => { const s = R.strata[`${k}|age:${a}`]; return `<td>${s.n < R.min_n ? '&lt;' + R.min_n : s.n}</td>`; }).join('') + `<td>${tot}</td></tr>`;
+  }
+  h += '<tr><td>合計</td>' + ages.map(a => `<td>${R.strata['age:' + a].n}</td>`).join('') + `<td>${R.strata.all.n}</td></tr></tbody></table>`;
+  $('ov-comp').innerHTML = h;
+  const logs = [...I.cleaning_log,
+    '基礎代謝量原始單位為 kJ，已換算為 kcal（÷ 4.184）。',
+    '年齡層以前測時年齡分組：未滿 30 歲、30–39 歲、40 歲以上（50 歲以上人數過少，併入 40 歲以上）。',
+    `任一分層人數少於 ${R.min_n} 人時不呈現該分層統計，以保護個人隱私。`,
+    '報告中不含任何可辨識個人之資料。'];
+  $('ov-log').innerHTML = logs.map(l => `<li>${esc(l)}</li>`).join('');
+}
+
+/* ---------- 篩選 ---------- */
+function segBtns(el, opts, key){
+  el.innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${state[key] === v}">${l}</button>`).join('');
+  el.onclick = e => { const b = e.target.closest('button'); if (!b) return; state[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); render(); };
+}
+segBtns($('f-sex'), [['all', '全部'], ['M', '男性'], ['F', '女性']], 'sex');
+segBtns($('f-age'), [['all', '全部'], ['<30', '未滿 30'], ['30-39', '30–39'], ['≥40', '40 以上']], 'age');
+const skey = () => state.sex === 'all' && state.age === 'all' ? 'all' : state.sex === 'all' ? 'age:' + state.age : state.age === 'all' ? 'sex:' + state.sex : `sex:${state.sex}|age:${state.age}`;
+
+/* ---------- 工具：tooltip ---------- */
+const tip = $('tip');
+function bindTip(svg){
+  svg.addEventListener('pointermove', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.style.opacity = 0; return; }
+    tip.innerHTML = t.dataset.tip; tip.style.opacity = 1;
+    const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8), y = e.clientY + 16 + tip.offsetHeight > innerHeight ? e.clientY - tip.offsetHeight - 12 : e.clientY + 16;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px'; });
+  svg.addEventListener('pointerleave', () => tip.style.opacity = 0);
+}
+const svgOpen = (w, h, label) => `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}">`;
+function niceTicks(lo, hi, n){ const span = hi - lo || 1, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= step0); const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10)); return out; }
+const sigOf = s => s && s.p != null && s.p < 0.05;
+function tipFor(f, s){ return `<b>${esc(f.name)}</b>（${esc(f.unit)}）<br>前測 ${fx(s.pre_mean, dd(f))}　後測 ${fx(s.post_mean, dd(f))}<br>變化 ${sgn(s.diff_mean, dd(f))}（95% CI ${fx(s.ci_lo, dd(f))} ~ ${fx(s.ci_hi, dd(f))}）<br>${s.test} p = ${pf(s.p)}${stars(s.p)}　n = ${s.n}`; }
+
+/* ---------- 圖：森林圖（變化率） ---------- */
+function forest(el, st){
+  const rows = MAIN.map(f => { const s = st.main[f.code]; const base = s.pre_mean;
+    return {f, s, m: s.diff_mean / base * 100, lo: s.ci_lo / base * 100, hi: s.ci_hi / base * 100}; });
+  const W = 760, rowH = 28, top = 26, L = 178, Rr = 116, H = top + rows.length * rowH + 10;
+  const ext = Math.max(...rows.map(r => Math.max(Math.abs(r.lo), Math.abs(r.hi)))) * 1.08 || 1;
+  const ticks = niceTicks(-ext, ext, 6), x0 = Math.min(ticks[0], -ext), x1 = Math.max(ticks[ticks.length - 1], ext);
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - Rr);
+  let g = svgOpen(W, H, '各指標變化率森林圖');
+  ticks.forEach(t => { g += `<line x1="${X(t)}" x2="${X(t)}" y1="${top - 6}" y2="${H - 8}" stroke="${t === 0 ? C.axis : C.grid}" stroke-width="1"/><text x="${X(t)}" y="${top - 12}" text-anchor="middle" class="t-mut">${t > 0 ? '+' : ''}${t}%</text>`; });
+  rows.forEach((r, i) => { const y = top + i * rowH + rowH / 2, sig = sigOf(r.s);
+    if (i % 2 === 0) g += `<rect x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}" fill="#f8faf9"/>`;
+    g += `<text x="${L - 12}" y="${y + 4}" text-anchor="end" class="t-ink">${esc(r.f.name)}</text>`;
+    g += `<line x1="${X(r.lo)}" x2="${X(r.hi)}" y1="${y}" y2="${y}" stroke="${C.teal}" stroke-width="2" stroke-linecap="round"/>`;
+    g += `<circle cx="${X(r.m)}" cy="${y}" r="${sig ? 6.5 : 5}" fill="${sig ? C.teal : '#fff'}" stroke="${sig ? '#fff' : C.teal}" stroke-width="2"/>`;
+    g += `<text x="${W - Rr + 10}" y="${y + 4}" class="${sig ? 't-ink' : 't-mut'}">${sgn(r.m, 2)}%${sig ? ' ' + stars(r.s.p) : ''}</text>`;
+    g += `<rect x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}" fill="transparent" data-tip="${esc(tipFor(r.f, r.s) + `<br>變化率 ${sgn(r.m, 2)}%（${fx(r.lo, 2)}% ~ ${fx(r.hi, 2)}%）`)}"/>`;
+  });
+  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
+}
+
+/* ---------- 圖：前後測啞鈴（平均 ± 95%CI） ---------- */
+function ciMean(m, sd, n){ const t = tq(n - 1); return [m - t * sd / Math.sqrt(n), m + t * sd / Math.sqrt(n)]; }
+function tq(df){ // t 分配 0.975 分位（近似，df ≥ 1）
+  const z = 1.959964; const g1 = (z ** 3 + z) / 4, g2 = (5 * z ** 5 + 16 * z ** 3 + 3 * z) / 96, g3 = (3 * z ** 7 + 19 * z ** 5 + 17 * z ** 3 - 15 * z) / 384;
+  return z + g1 / df + g2 / df ** 2 + g3 / df ** 3; }
+function dumbbell(el, f, s){
+  const W = 420, H = 260, L = 56, Rr = 20, T = 18, B = 34;
+  const a = ciMean(s.pre_mean, s.pre_sd, s.n), b = ciMean(s.post_mean, s.post_sd, s.n);
+  let lo = Math.min(a[0], b[0]), hi = Math.max(a[1], b[1]); const pad = (hi - lo) * 0.25 || 1; lo -= pad; hi += pad;
+  const ticks = niceTicks(lo, hi, 5); lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+  const Y = v => T + (hi - v) / (hi - lo) * (H - T - B), xs = [L + (W - L - Rr) * 0.3, L + (W - L - Rr) * 0.7];
+  let g = svgOpen(W, H, f.name + '前後測平均值');
+  ticks.forEach(t => g += `<line x1="${L}" x2="${W - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="${C.grid}"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end" class="t-mut">${fx(t, Math.max(0, -Math.floor(Math.log10((ticks[1] - ticks[0]) || 1))))}</text>`);
+  g += `<line x1="${xs[0]}" x2="${xs[1]}" y1="${Y(s.pre_mean)}" y2="${Y(s.post_mean)}" stroke="${C.axis}" stroke-width="2"/>`;
+  [[a, s.pre_mean, C.teal, '前測', s.pre_sd], [b, s.post_mean, C.orange, '後測', s.post_sd]].forEach(([ci, m, col, lab, sd], i) => {
+    g += `<line x1="${xs[i]}" x2="${xs[i]}" y1="${Y(ci[0])}" y2="${Y(ci[1])}" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`;
+    g += `<line x1="${xs[i] - 7}" x2="${xs[i] + 7}" y1="${Y(ci[0])}" y2="${Y(ci[0])}" stroke="${col}" stroke-width="2"/><line x1="${xs[i] - 7}" x2="${xs[i] + 7}" y1="${Y(ci[1])}" y2="${Y(ci[1])}" stroke="${col}" stroke-width="2"/>`;
+    g += `<circle cx="${xs[i]}" cy="${Y(m)}" r="6" fill="${col}" stroke="#fff" stroke-width="2"/>`;
+    g += `<text x="${xs[i] + (i ? 14 : -14)}" y="${Y(m) + 4}" text-anchor="${i ? 'start' : 'end'}" class="t-ink" style="font-weight:500">${fx(m, dd(f))}</text>`;
+    g += `<text x="${xs[i]}" y="${H - 10}" text-anchor="middle">${lab}</text>`;
+    g += `<rect x="${xs[i] - 30}" y="${T}" width="60" height="${H - T - B}" fill="transparent" data-tip="${esc(`<b>${lab}</b>　${esc(f.name)}<br>平均 ${fx(m, dd(f))} ${esc(f.unit)}<br>95% CI ${fx(ci[0], dd(f))} ~ ${fx(ci[1], dd(f))}<br>標準差 ${fx(sd, dd(f))}　n = ${s.n}`)}"/>`;
+  });
+  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
+}
+
+/* ---------- 圖：分層變化 ---------- */
+function strataDots(el, f){
+  const keys = [['all', '全體'], ['sex:M', '男性'], ['sex:F', '女性'], ['age:<30', '未滿 30 歲'], ['age:30-39', '30–39 歲'], ['age:≥40', '40 歲以上']];
+  const rows = keys.map(([k, l]) => ({k, l, st: R.strata[k]})).filter(r => !r.st.suppressed).map(r => ({...r, s: r.st.main[f.code]}));
+  const W = 420, rowH = 34, T = 24, L = 96, Rr = 70, H = T + rows.length * rowH + 6;
+  const ext = Math.max(...rows.map(r => Math.max(Math.abs(r.s.ci_lo), Math.abs(r.s.ci_hi)))) * 1.1 || 1;
+  const ticks = niceTicks(-ext, ext, 4), x0 = Math.min(ticks[0], -ext), x1 = Math.max(ticks[ticks.length - 1], ext);
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - Rr);
+  let g = svgOpen(W, H, f.name + '各分層變化量');
+  ticks.forEach(t => g += `<line x1="${X(t)}" x2="${X(t)}" y1="${T - 6}" y2="${H - 4}" stroke="${t === 0 ? C.axis : C.grid}"/><text x="${X(t)}" y="${T - 11}" text-anchor="middle" class="t-mut">${t > 0 ? '+' : ''}${+t.toFixed(3)}</text>`);
+  rows.forEach((r, i) => { const y = T + i * rowH + rowH / 2, sig = sigOf(r.s);
+    if (i === 1 || i === 3) g += `<line x1="0" x2="${W}" y1="${y - rowH / 2}" y2="${y - rowH / 2}" stroke="${C.line}"/>`;
+    g += `<text x="${L - 10}" y="${y + 4}" text-anchor="end" class="t-ink">${r.l}</text><text x="${L - 10}" y="${y + 16}" text-anchor="end" class="t-mut" style="font-size:10.5px">n=${r.s.n}</text>`;
+    g += `<line x1="${X(r.s.ci_lo)}" x2="${X(r.s.ci_hi)}" y1="${y}" y2="${y}" stroke="${C.teal}" stroke-width="2" stroke-linecap="round"/>`;
+    g += `<circle cx="${X(r.s.diff_mean)}" cy="${y}" r="5" fill="${sig ? C.teal : '#fff'}" stroke="${sig ? '#fff' : C.teal}" stroke-width="2"/>`;
+    g += `<text x="${W - Rr + 8}" y="${y + 4}" class="${sig ? 't-ink' : 't-mut'}">${sgn(r.s.diff_mean, dd(f))}${stars(r.s.p)}</text>`;
+    g += `<rect x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}" fill="transparent" data-tip="${esc(`<b>${r.l}</b><br>` + tipFor(f, r.s))}"/>`;
+  });
+  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
+}
+
+/* ---------- 圖：100% 堆疊橫條 ---------- */
+const CAT_COLORS = {bmi: [C.yellow, C.teal, C.pink, C.orange], vfat: [C.teal, C.pink, C.orange]};
+const onDark = c => c === C.teal;
+function stacked(el, cats, pre, post, colors, label){
+  const W = 420, L = 44, Rr = 6, barH = 26, gap = 24, T = 6, H = T + 2 * barH + gap + 8;
+  const n = pre.reduce((a, b) => a + b, 0);
+  let g = svgOpen(W, H, label);
+  [[pre, '前測'], [post, '後測']].forEach(([arr, lab], ri) => {
+    const y = T + ri * (barH + gap); let x = L; const w = W - L - Rr;
+    g += `<text x="${L - 8}" y="${y + barH / 2 + 4}" text-anchor="end" class="t-ink">${lab}</text>`;
+    const segs = arr.map((v, i) => ({v, i})).filter(o => o.v > 0);
+    segs.forEach((o, j) => { const sw = o.v / n * w - (j < segs.length - 1 ? 2 : 0), pct = o.v / n * 100;
+      const rx = 4;
+      g += `<rect x="${x}" y="${y}" width="${Math.max(sw, 0.5)}" height="${barH}" rx="${segs.length === 1 ? rx : (j === 0 || j === segs.length - 1 ? rx : 0)}" fill="${colors[o.i]}" data-tip="${esc(`<b>${lab}・${cats[o.i]}</b><br>${o.v} 人（${pct.toFixed(1)}%）`)}"/>`;
+      const txt = `${o.v}（${pct.toFixed(0)}%）`;
+      if (sw > [...txt].reduce((a, ch) => a + (ch.charCodeAt(0) > 0x2E80 ? 11.5 : 6.6), 0) + 8) g += `<text x="${x + sw / 2}" y="${y + barH / 2 + 4}" text-anchor="middle" style="fill:${onDark(colors[o.i]) ? '#fff' : C.ink};font-size:11.5px;pointer-events:none">${txt}</text>`;
+      x += sw + 2; });
+  });
+  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
+}
+const legendHTML = (cats, colors) => cats.map((c, i) => `<span><i style="background:${colors[i]}"></i>${esc(c)}</span>`).join('');
+
+/* ---------- 表格 ---------- */
+function verdictChip(f, s){
+  if (!sigOf(s)) return '<span class="chip ns">無顯著</span>';
+  const up = s.diff_mean > 0, good = f.good === 0 ? null : (Math.sign(s.diff_mean) === f.good);
+  const cls = good === null ? 'mid' : good ? 'low' : 'high';
+  return `<span class="chip ${cls}">${up ? '▲ 上升' : '▼ 下降'}${good === null ? '' : good ? '・有利' : '・不利'}</span>`;
+}
+function compareTable(fields, stats, withHolm){
+  let h = `<table><thead><tr><th>指標（單位）</th><th>n</th><th>前測</th><th>後測</th><th>變化量（95% CI）</th><th>變化率</th><th>配對 t<br>p 值</th><th>Wilcoxon<br>p 值</th>${withHolm ? '<th>Holm 校正<br>p 值</th>' : ''}<th>判定</th></tr></thead><tbody>`;
+  fields.forEach(f => { const s = stats[f.code], d = dd(f), sel = s.test === '配對t';
+    h += `<tr class="${sigOf(s) ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td><td>${s.n}</td>
+      <td>${fx(s.pre_mean, d)} ± ${fx(s.pre_sd, d)}</td><td>${fx(s.post_mean, d)} ± ${fx(s.post_sd, d)}</td>
+      <td>${sgn(s.diff_mean, d)}<span class="ci">${fx(s.ci_lo, d)} ~ ${fx(s.ci_hi, d)}</span></td><td>${sgn(s.pct, 2)}%</td>
+      <td class="${sel ? 'p-sel' : 'p-alt'}">${pf(s.p_t)}${sel ? stars(s.p_t) : ''}</td><td class="${sel ? 'p-alt' : 'p-sel'}">${pf(s.p_w)}${sel ? '' : stars(s.p_w)}</td>
+      ${withHolm ? `<td class="p-alt">${pf(s.p_holm)}</td>` : ''}<td>${verdictChip(f, s)}</td></tr>`; });
+  return h + '</tbody></table>';
+}
+function strataTable(el, groups, title, cmp){
+  let h = `<table><thead><tr><th>指標（單位）</th>${groups.map(([k, l]) => `<th>${l}<br><span style="font-weight:400">n = ${R.strata[k].n}</span></th>`).join('')}<th>${cmp[0]}<br>p 值</th><th>${cmp[1]}<br>p 值</th></tr></thead><tbody>`;
+  MAIN.forEach(f => { const d = dd(f), c = R.compare[f.code];
+    h += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + groups.map(([k]) => { const st = R.strata[k];
+      if (st.suppressed) return '<td class="p-alt">人數不足</td>'; const s = st.main[f.code];
+      return `<td class="${sigOf(s) ? 'p-sel' : ''}">${sgn(s.diff_mean, d)}${stars(s.p)}<span class="ci">${fx(s.ci_lo, d)} ~ ${fx(s.ci_hi, d)}</span></td>`; }).join('')
+      + `<td class="${c[cmp[2]] < 0.05 ? 'p-sel' : 'p-alt'}">${pf(c[cmp[2]])}${stars(c[cmp[2]])}</td><td class="${c[cmp[3]] < 0.05 ? 'p-sel' : 'p-alt'}">${pf(c[cmp[3]])}${stars(c[cmp[3]])}</td></tr>`; });
+  el.innerHTML = `<div style="font-weight:500;margin-bottom:6px">${title}</div>` + h + '</tbody></table>';
+}
+
+/* ---------- 靜態區塊 ---------- */
+strataTable($('strata-sex'), [['sex:M', '男性'], ['sex:F', '女性']], '依性別：平均變化量（95% CI）', ['Welch t', 'Mann-Whitney', 'sex_p_welch', 'sex_p_mw']);
+strataTable($('strata-age'), [['age:<30', '未滿 30 歲'], ['age:30-39', '30–39 歲'], ['age:≥40', '40 歲以上']], '依年齡層：平均變化量（95% CI）', ['ANOVA', 'Kruskal-Wallis', 'age_p_anova', 'age_p_kw']);
+{
+  let h = '<table><thead><tr><th>風險分類</th><th>分組</th><th>各組符合人數／人數（%）</th><th>χ²</th><th>自由度</th><th>卡方 p 值</th><th>期望次數 &lt; 5 格數</th><th>Fisher 精確<br>p 值</th></tr></thead><tbody>';
+  R.baseline_chisq.forEach(x => { const useF = x.n_exp_lt5 / x.n_cells > 0.2, p = useF ? x.p_fisher : x.p;
+    const groups = x.rows.map((r, i) => { const [a, b] = x.observed[i]; return `${esc(r)} ${a}/${a + b}（${(100 * a / (a + b || 1)).toFixed(1)}%）`; }).join('<br>');
+    h += `<tr><td class="name" style="white-space:normal;min-width:150px">${esc(x.outcome_name)}</td><td>${x.by}</td><td style="text-align:left">${groups}</td><td>${fx(x.chi2, 2)}</td><td>${x.df}</td>
+      <td class="${!useF ? 'p-sel' : 'p-alt'}">${pf(x.p)}${!useF ? stars(x.p) : ''}</td><td>${x.n_exp_lt5}/${x.n_cells}</td><td class="${useF ? 'p-sel' : 'p-alt'}">${pf(x.p_fisher)}${useF ? stars(x.p_fisher) : ''}</td></tr>`; });
+  $('chisq-table').innerHTML = h + '</tbody></table>';
+  const A = R.attrition;
+  let a = `<table><thead><tr><th>變項（單位）</th><th>完成前後測（n = ${A.n_completed}）</th><th>僅前測（n = ${A.n_dropped}）</th><th>Welch t p 值</th></tr></thead><tbody>`;
+  A.vars.forEach(v => a += `<tr><td class="name">${esc(v.name)}<small>${esc(v.unit)}</small></td><td>${fx(v.m1, 1)} ± ${fx(v.s1, 1)}</td><td>${fx(v.m0, 1)} ± ${fx(v.s0, 1)}</td><td class="${v.p < 0.05 ? 'p-sel' : 'p-alt'}">${pf(v.p)}${stars(v.p)}</td></tr>`);
+  const sx = A.sex; const pS = sx.n_exp_lt5 ? sx.p_fisher : sx.p;
+  a += `<tr><td class="name">男性比例</td><td>${sx.observed[0][0]}/${sx.observed[0][0] + sx.observed[1][0]}（${(100 * sx.observed[0][0] / (sx.observed[0][0] + sx.observed[1][0])).toFixed(1)}%）</td><td>${sx.observed[0][1]}/${sx.observed[0][1] + sx.observed[1][1]}（${(100 * sx.observed[0][1] / (sx.observed[0][1] + sx.observed[1][1])).toFixed(1)}%）</td><td class="${pS < 0.05 ? 'p-sel' : 'p-alt'}">${pf(pS)}${stars(pS)}（卡方）</td></tr>`;
+  $('att-table').innerHTML = a + '</tbody></table>';
+  $('att-foot').textContent = (pS < 0.05 || A.vars.some(v => v.p < 0.05))
+    ? '兩組在部分特性上有顯著差異，完成前後測者可能無法完全代表全體受測者，解讀前後測結果時請留意。'
+    : '兩組前測特性無顯著差異，完成前後測者對全體受測者具一定代表性。';
+}
+{
+  const M = [
+    ['研究設計', `單組前後測設計。前測 ${I.pre_date}、後測 ${I.post_date}，間隔 ${I.interval_days} 天；儀器為 TANITA ${I.model} 多頻生物電阻抗分析儀。`],
+    ['分析對象', `前後測皆完成者 ${I.n_paired} 人。同一人同一天多次量測者保留最後一筆。`],
+    ['連續變項', '以配對 t 檢定（雙尾）比較前後測平均值，並計算變化量的 95% 信賴區間。同時以 Shapiro-Wilk 檢定變化量是否呈常態；若 p < 0.05（非常態），改以 Wilcoxon 符號等級檢定作為判定依據。兩種檢定結果皆列出供參考。'],
+    ['多重比較', '本報告同時檢定多項指標，增加偽陽性機率。主表另列 Holm 法校正後的 p 值；未經校正即顯著、校正後不顯著的結果，宜視為初步趨勢。'],
+    ['類別變項', '前後測分類變化採 McNemar 精確（二項）檢定；三類以上採 Bowker 對稱性檢定。前測分類比例的組間差異採 Pearson 卡方檢定，期望次數小於 5 的格子超過 20% 時改採 Fisher 精確檢定（2×k 表格以 Freeman-Halton 法完整列舉）。'],
+    ['分層比較', '性別間的變化量差異採 Welch t 檢定與 Mann-Whitney U 檢定；年齡層間採單因子變異數分析與 Kruskal-Wallis 檢定。'],
+    ['顯著水準', 'α = 0.05（雙尾）。* p < 0.05、** p < 0.01、*** p < 0.001。'],
+    ['軟體', 'Python（SciPy、statsmodels）計算；另附 Excel 驗算檔，主要統計量以 Excel 內建公式重算，可逐格驗證。設定已對齊 SPSS 預設（Wilcoxon 與 Mann-Whitney 為漸近檢定、不使用連續性校正）。'],
+    ['研究限制', '(1) 無對照組，無法排除季節、測量時段、飲食與水分狀態等因素的影響；(2) 生物電阻抗法易受水分、進食與運動影響，小幅變化可能落在測量誤差範圍內；(3) 部分受測者僅完成一次量測，可能影響代表性；(4) 未量測腰圍。'],
+  ];
+  $('method').innerHTML = '<dl>' + M.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('') + '</dl>';
+  let g = '<table class="left"><thead><tr><th>中文名稱</th><th>單位</th><th>原始欄位</th><th>說明</th></tr></thead><tbody>';
+  MAIN.forEach(f => g += `<tr><td class="name">${esc(f.name)}</td><td>${esc(f.unit)}</td><td class="p-alt">${f.code}</td><td style="text-align:left;white-space:normal">${esc(f.note || '')}</td></tr>`);
+  g += `<tr><td class="name">分節指標</td><td>%、kg、Ω</td><td class="p-alt">RL/LL/RA/LA/TR + FATP/FATM/FFM/PMM/IMP</td><td style="text-align:left;white-space:normal">RL 右腳、LL 左腳、RA 右手、LA 左手、TR 軀幹</td></tr>`;
+  $('glossary').innerHTML = g + '</tbody></table>';
+  $('footer').textContent = `本報告由分析程式自動產生 ・ 資料來源：TANITA ${I.model} GMON 匯出檔 ・ 僅呈現彙總統計，不含個人資料`;
+}
+
+/* ---------- 指標選單 ---------- */
+$('ind-sel').innerHTML = MAIN.map(f => `<option value="${f.code}" ${f.code === state.ind ? 'selected' : ''}>${esc(f.name)}（${esc(f.unit)}）</option>`).join('');
+$('ind-sel').onchange = e => { state.ind = e.target.value; render(); };
+$('strata-note').textContent = `不受上方篩選影響；人數不足 ${R.min_n} 人的分層不予呈現。`;
+$('lg-bmi').innerHTML = legendHTML(['過輕 <18.5', '正常 18.5–23.9', '過重 24–26.9', '肥胖 ≥27'], CAT_COLORS.bmi);
+$('lg-vfat').innerHTML = legendHTML(['標準 1–9', '偏高 10–14', '過高 ≥15'], CAT_COLORS.vfat);
+
+/* ---------- 依篩選更新 ---------- */
+const FILTERED = ['kpi-body', 'forest', 'main-table', 'single-dumbbell', 'cat-bmi', 'cat-vfat', 'bin-table', 'seg-table'];
+function render(){
+  const k = skey(), st = R.strata[k];
+  $('f-n').innerHTML = `目前對象：<b>${esc(st.label)}</b>　完成前後測 <b>${st.n < R.min_n ? '&lt;' + R.min_n : st.n}</b> 人`;
+  $('print-scope').textContent = `第 3–6、9 節呈現對象：${st.label}（完成前後測 ${st.n} 人）`;
+  if (st.suppressed) {
+    const msg = `<div class="suppress">此分層完成前後測人數少於 ${R.min_n} 人，為保護個人隱私不呈現統計結果。請放寬篩選條件。</div>`;
+    FILTERED.forEach(id => $(id).innerHTML = id === 'kpi-body' || id === 'main-table' ? msg : '');
+    ['main-foot', 'single-foot', 'cat-bmi-foot', 'cat-vfat-foot'].forEach(id => $(id).textContent = '');
+    return;
+  }
+  // KPI
+  const KP = ['WEIGHT', 'BMI', 'FATP', 'PMM', 'VFATL', 'PHASEANGLE'];
+  $('kpi-body').innerHTML = '<div class="grid g3">' + KP.map(c => { const f = F[c], s = st.main[c], d = dd(f);
+    return `<div class="card kpi"><div class="lab" style="font-size:13px;color:var(--ink2)">${esc(f.name)}（${esc(f.unit)}）</div>
+      <div class="row"><span class="from">${fx(s.pre_mean, d)} →</span><span class="to">${fx(s.post_mean, d)}</span></div>
+      <div class="delta">變化 ${sgn(s.diff_mean, d)}（${sgn(s.pct, 1)}%）・p = ${pf(s.p)}${stars(s.p)}</div>
+      <div style="margin-top:6px">${verdictChip(f, s)}</div></div>`; }).join('') + '</div>';
+  forest($('forest'), st);
+  $('main-table').innerHTML = compareTable(MAIN, st.main, true);
+  $('main-foot').textContent = `n = ${st.n}。變化率 = 平均變化量 ÷ 前測平均值。「有利／不利」依健康意義判定（如體脂肪率下降、肌肉量上升為有利）；未標示者無一致的好壞方向。`;
+  // 單一指標
+  const f = F[state.ind], s = st.main[state.ind];
+  dumbbell($('single-dumbbell'), f, s);
+  $('single-foot').textContent = `變化 ${sgn(s.diff_mean, dd(f))} ${f.unit}；${s.test} p = ${pf(s.p)}。上升 ${s.n_up} 人、持平 ${s.n_same} 人、下降 ${s.n_down} 人。`;
+  strataDots($('single-strata'), f);
+  // 分級
+  stacked($('cat-bmi'), st.bmi_cat.cats, st.bmi_cat.pre, st.bmi_cat.post, CAT_COLORS.bmi, 'BMI 分級分布');
+  $('cat-bmi-foot').textContent = `Bowker 對稱性檢定 χ² = ${fx(st.bmi_cat.bowker, 2)}，自由度 ${st.bmi_cat.df}，p = ${pf(st.bmi_cat.p)}`;
+  stacked($('cat-vfat'), st.vfat_cat.cats, st.vfat_cat.pre, st.vfat_cat.post, CAT_COLORS.vfat, '內臟脂肪等級分布');
+  $('cat-vfat-foot').textContent = `Bowker 對稱性檢定 χ² = ${fx(st.vfat_cat.bowker, 2)}，自由度 ${st.vfat_cat.df}，p = ${pf(st.vfat_cat.p)}`;
+  let b = '<table><thead><tr><th>風險分類</th><th>前測人數（%）</th><th>後測人數（%）</th><th>改善</th><th>惡化</th><th>McNemar p 值</th></tr></thead><tbody>';
+  BIN.forEach(x => { const v = st.binary[x.code];
+    b += `<tr><td class="name" style="white-space:normal">${esc(x.name)}</td><td>${v.pre}（${(100 * v.pre / v.n).toFixed(1)}%）</td><td>${v.post}（${(100 * v.post / v.n).toFixed(1)}%）</td><td>${v.improved}</td><td>${v.worsened}</td><td class="${v.p < 0.05 ? 'p-sel' : 'p-alt'}">${pf(v.p)}${stars(v.p)}</td></tr>`; });
+  $('bin-table').innerHTML = b + '</tbody></table>';
+  $('seg-table').innerHTML = compareTable(SEG, st.seg, false);
+}
+render();
+if (PRINT) { document.getElementById('seg-details').open = true; }
+window.addEventListener('beforeprint', () => document.getElementById('seg-details').open = true);
+})();
+</script>
+</body>
+</html>
