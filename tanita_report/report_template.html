@@ -143,6 +143,7 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
   details>summary::-webkit-details-marker{display:none}
   .tbl-wrap{overflow:visible}
   .ci{display:inline;font-size:7.4pt;margin-left:4px}
+  .many-ages #strata-age table{font-size:7.8pt} .many-ages #strata-age .ci{display:block;margin-left:0}  /* 整體分析 5 個年齡層：表格較寬 */
   .ci::before{content:"("}.ci::after{content:")"}
   .chip{font-size:7.4pt;padding:0 6px}
   .nobreak-print{break-before:auto!important}
@@ -311,7 +312,7 @@ const BY_SEX = R.info.by_sex !== false;
 if (!BY_SEX) { const e = document.getElementById('chisq-by'); if (e) e.textContent = '年齡層'; }
 const PRINT = /[?&]print\b/.test(location.search);
 const C = {teal:'#069494', orange:'#FF8243', pink:'#FFC0CB', yellow:'#FCE883', ink:'#1c2a2e', ink2:'#46565b', muted:'#6f7e82', grid:'#edf0ef', line:'#e3e8e7', axis:'#c9d1cf'};
-const AGE_COLORS = ['#7fcdc8', '#069494', '#034b4a'];
+const AGE_COLORS = R.info.age_groups.length > 3 ? ['#b3e3df', '#7fcdc8', '#069494', '#04706f', '#034b4a'] : ['#7fcdc8', '#069494', '#034b4a'];  // 年齡由低到高、由淺到深
 const CHG_COLORS = [C.teal, '#d9dedd', C.orange], DIR_COLORS = ['#6c8fb0', '#d9dedd', '#b7cbe0'];
 const BYL = {sex: '性別', age: '年齡層', risk: '前測體位'};
 const I = R.info, K = I.k, W = I.waves.map(w => w.label), MIN = R.min_n, AG = I.age_groups;
@@ -476,6 +477,7 @@ if (BY_SEX) {
   $('age-card').firstElementChild.textContent = '8-1　年齡層';
   $('risk-card').firstElementChild.innerHTML = '8-2　前測體位（前測 BMI ≥ 24 與 &lt; 24）';
 }
+if (AG.length > 3) document.body.classList.add('many-ages');
 const ageGroups = AG.map((g, i) => ({key: 'age:' + g, label: ageLab(g), short: ageShort(g), color: AGE_COLORS[i]})).filter(g => R.strata[g.key].n !== 0);
 $('lg-age').innerHTML = legendHTML(ageGroups.filter(g => R.strata[g.key].rm).map(g => g.label), ageGroups.filter(g => R.strata[g.key].rm).map(g => g.color));
 strataBlock(ageGroups, 'age-charts', 'strata-age', 'age');

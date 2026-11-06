@@ -76,6 +76,15 @@ ZH_COLUMNS = {
 # 年齡層（以首次量測年齡；固定分組，21 家一致）
 AGE_BINS = [(0, 40, "≤40"), (41, 50, "41-50"), (51, 200, "≥51")]
 AGE_GROUPS = [b[2] for b in AGE_BINS]
+# 整體分析（--pooled）限定的年齡層：人數較多，可細分為 5 組；單一職場分析仍用上面 3 組
+POOLED_AGE_BINS = [(0, 30, "≤30"), (31, 40, "31-40"), (41, 50, "41-50"), (51, 60, "51-60"), (61, 200, "≥61")]
+SITE_AGE_BINS = list(AGE_BINS)
+
+
+def set_age_bins(bins):
+    """切換年齡層定義（原地修改，讓 build_excel 等引用 AGE_GROUPS 的地方一起更新）。"""
+    AGE_BINS[:] = bins
+    AGE_GROUPS[:] = [b[2] for b in bins]
 SEX_LABEL = {"M": "男性", "F": "女性"}
 RISK_LABEL = {1: "前測 BMI ≥ 24", 0: "前測 BMI < 24"}
 BMI_CATS = ["過輕", "正常", "過重", "肥胖"]
@@ -175,6 +184,16 @@ def load_data(path, name=None, by_group=False):
             wo, ws = cluster(sub["DATE"].unique())
             gw[gname] = ws
             d.loc[sub.index, "WAVE"] = sub["DATE"].map(wo)
+        # 完整檢測應為 3 次（前測、後測、追蹤測）；未完成 3 次的職場整家剔除
+        drop = {g: ws for g, ws in gw.items() if len(ws) != 3}
+        if drop:
+            log.append(f"未完成 3 次量測的職場 {len(drop)} 家整家剔除（不納入任何分析）：" + "、".join(
+                f"{g}（{len(ws)} 次，{d.loc[d.GROUP1 == g, 'CUSTOMERID'].nunique()} 人、{int((d.GROUP1 == g).sum())} 筆）" for g, ws in drop.items()))
+            d = d[~d.GROUP1.isin(drop)].copy()
+            raw = raw[~raw.GROUP1.isin(drop)]
+            gw = {g: ws for g, ws in gw.items() if g not in drop}
+            if not gw:
+                raise SystemExit("沒有完成 3 次量測的職場")
         d["WAVE"] = d["WAVE"].astype(int)
         Ks = {g: len(ws) for g, ws in gw.items()}
         K = max(Ks.values())
@@ -412,20 +431,28 @@ def fisher_rxc(tab):
         return (sum(math.lgamma(c + 1) - math.lgamma(x + 1) - math.lgamma(c - x + 1) for x, c in zip(row, cols))
                 - (math.lgamma(N + 1) - math.lgamma(r1 + 1) - math.lgamma(N - r1 + 1)))
 
-    p_obs, total = logp(tab[0]), 0.0
+    p_obs = logp(tab[0])
+    # 精確列舉所有邊際相同的表（結果與逐一列舉相同）；為了速度，人數最多的 3 欄以 numpy 向量化
+    cs = [int(c) for c in np.sort(cols)]
+    lf = [np.array([math.lgamma(c + 1) - math.lgamma(x + 1) - math.lgamma(c - x + 1) for x in range(c + 1)]) for c in cs]
+    const = math.lgamma(N + 1) - math.lgamma(r1 + 1) - math.lgamma(N - r1 + 1)
+    m = len(cs)
+    ab = lf[m - 3][:, None] + lf[m - 2][None, :]
+    xab = np.arange(cs[m - 3] + 1)[:, None] + np.arange(cs[m - 2] + 1)[None, :]
+    total = 0.0
 
     def rec(i, rem, acc):
         nonlocal total
-        if i == len(cols) - 1:
-            if 0 <= rem <= cols[i]:
-                lp = logp(acc + [rem])
-                if lp <= p_obs + 1e-7:
-                    total += math.exp(lp)
+        if i == m - 3:
+            xc = rem - xab
+            lp = acc + ab + lf[m - 1][np.clip(xc, 0, cs[-1])] - const
+            sel = (xc >= 0) & (xc <= cs[-1]) & (lp <= p_obs + 1e-7)
+            total += float(np.exp(lp[sel]).sum())
             return
-        for x in range(0, min(cols[i], rem) + 1):
-            rec(i + 1, rem - x, acc + [x])
+        for x in range(0, min(cs[i], rem) + 1):
+            rec(i + 1, rem - x, acc + lf[i][x])
 
-    rec(0, r1, [])
+    rec(0, int(r1), 0.0)
     return min(1.0, total)
 
 
@@ -647,6 +674,7 @@ def lmm_sensitivity(D):
 
 def run(path, name=None, by_sex=True, by_group=False):
     """by_sex=False：不做性別分層、時間 × 性別交互作用與性別卡方（使用者指定的職場，例如性別幾乎單一）。"""
+    set_age_bins(POOLED_AGE_BINS if by_group else SITE_AGE_BINS)
     D = load_data(path, name, by_group=by_group)
     K, people, long, info = D["K"], D["people"], D["long"], D["info"]
     info["by_sex"] = by_sex
