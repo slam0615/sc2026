@@ -400,9 +400,11 @@ def build(D, res, out_path):
     rule = "；".join(f"{A.MAIN[c][0]} {'相對變化 (後−前)/前' if k == 'rel' else '變化量 後−前'} 達 {'%g%%' % (t * 100) if k == 'rel' else '%g' % t}"
                     for c, (k, t) in A.CHANGE_THRESH.items())
     title(ws, "個人變化：改善／持平／變差人數與體重減少比例",
-          f"方向 g：BMI、體重、體脂率、內臟脂肪 = −1（下降為改善），總體肌肉量 = +1。改善：g×變化 ≥ 門檻；變差：g×變化 ≤ −門檻；其餘持平（容許誤差 1E-9）。門檻：{rule}。"
+          f"方向 g：體脂率、內臟脂肪 = −1（下降為改善），總體肌肉量 = +1；BMI、體重只看方向（g = −1，第一欄為「下降」、第三欄為「上升」，不判定好壞）。"
+          f"改善／下降：g×變化 ≥ 門檻；變差／上升：g×變化 ≤ −門檻；其餘持平（容許誤差 1E-9）。門檻：{rule}。"
+          f"身體組成類型：脂肪量 = 體重 × 體脂率 ÷ 100，脂肪量與肌肉量變化 ≥ {A.COMP_THRESH} kg 為增加、≤ −{A.COMP_THRESH} kg 為減少。"
           "最後一次量測：三次皆參加者為最後一次、參加兩次者為介入後量測。")
-    hd = ["比較", "對象條件", "項目", "n", "改善／達標人數", "持平", "變差", "Python 改善／達標", "差異", "Python 變差", "差異"]
+    hd = ["比較", "對象條件", "項目", "n", "改善／下降／符合人數", "持平", "變差／上升", "Python 第一欄", "差異", "Python 第三欄", "差異"]
     head(ws, 4, hd, [18, 14, 16, 6, 12, 8, 8, 12, 8, 10, 8])
     comps = [("last", f"{W[0]}→最後一次", "全體納入分析者", f"({HAS[0]}=1)", lcol)]
     comps += [(f"c{w}", f"{W[0]}→{W[w - 1]}", "三次皆參加", f"({COMP}=1)", {c: col[c][w - 1] for c in codes}) for w in range(2, K + 1)]
@@ -413,19 +415,35 @@ def build(D, res, out_path):
         for code in codes:
             Ya, Yb = rng(col[code][0]), rng(bcol[code])
             kind, thr = A.CHANGE_THRESH[code]
-            g = A.MAIN[code][3]
+            g = A.MAIN[code][3] or -1
             ch = f"({Yb}-{Ya})/{Ya}" if kind == "rel" else f"({Yb}-{Ya})"
             pc = py.get(code) or {}
-            cells = [lab, who, A.MAIN[code][0], f"=SUMPRODUCT({cnd}*1)",
+            cells = [lab, who, A.MAIN[code][0] + ("（方向）" if not A.MAIN[code][3] else ""), f"=SUMPRODUCT({cnd}*1)",
                      f"=SUMPRODUCT({cnd}*({g}*{ch}>={thr}-1E-9))", f"=D{r}-E{r}-G{r}", f"=SUMPRODUCT({cnd}*({g}*{ch}<=-{thr}+1E-9))",
-                     pc.get("improve"), f'=IF(ISNUMBER(H{r}),E{r}-H{r},"")', pc.get("worse"), f'=IF(ISNUMBER(J{r}),G{r}-J{r},"")']
+                     pc.get("improve", pc.get("down")), f'=IF(ISNUMBER(H{r}),E{r}-H{r},"")', pc.get("worse", pc.get("up")), f'=IF(ISNUMBER(J{r}),G{r}-J{r},"")']
             for j, v in enumerate(cells, 1):
                 ws.cell(r, j, v)
             r += 1
         Ya, Yb = rng(col["WEIGHT"][0]), rng(bcol["WEIGHT"])
+        Fa, Fb, Ma, Mb = rng(col["FATP"][0]), rng(bcol["FATP"]), rng(col["PMM"][0]), rng(bcol["PMM"])
+        th = A.COMP_THRESH
+        dF, dM = f"(({Yb}*{Fb}-{Ya}*{Fa})/100)", f"({Mb}-{Ma})"
+        fU, fD, mU, mD = (f"({dF}>={th}-1E-9)", f"({dF}<=-{th}+1E-9)", f"({dM}>={th}-1E-9)", f"({dM}<=-{th}+1E-9)")
+        fS, mS = f"(1-{fU}-{fD})", f"(1-{mU}-{mD})"
+        cond_t = {"fat_loss": f"{fD}*(1-{mD})", "muscle_gain": f"{fS}*{mU}", "stable": f"{fS}*{mS}", "both_down": f"{fD}*{mD}",
+                  "both_up": f"{fU}*{mU}", "muscle_loss": f"{fS}*{mD}", "fat_gain": f"{fU}*(1-{mU})"}
         for t in A.WEIGHT_LOSS_TARGETS:
-            cells = [lab, who, f"體重減少 ≥ {t}%", f"=SUMPRODUCT({cnd}*1)", f"=SUMPRODUCT({cnd}*(({Yb}-{Ya})/{Ya}*100<=-{t}+1E-9))", "", "",
-                     (py.get("weight_loss") or {}).get(str(t)), f'=IF(ISNUMBER(H{r}),E{r}-H{r},"")', "", ""]
+            for keep in (False, True):
+                extra = f"*(1-{mD})" if keep else ""
+                cells = [lab, who, f"體重減少 ≥ {t}%" + ("且肌肉量未減少" if keep else ""), f"=SUMPRODUCT({cnd}*1)",
+                         f"=SUMPRODUCT({cnd}*(({Yb}-{Ya})/{Ya}*100<=-{t}+1E-9){extra})", "", "",
+                         (py.get("weight_loss_keep" if keep else "weight_loss") or {}).get(str(t)), f'=IF(ISNUMBER(H{r}),E{r}-H{r},"")', "", ""]
+                for j, v in enumerate(cells, 1):
+                    ws.cell(r, j, v)
+                r += 1
+        for code_t, name_t, grp_t, _ in A.COMP_TYPES:
+            cells = [lab, who, f"組成：{name_t}（{ {'good': '有利', 'neutral': '持平', 'mixed': '需注意', 'bad': '不利'}[grp_t] }）", f"=SUMPRODUCT({cnd}*1)",
+                     f"=SUMPRODUCT({cnd}*{cond_t[code_t]})", "", "", (py.get("comp") or {}).get(code_t), f'=IF(ISNUMBER(H{r}),E{r}-H{r},"")', "", ""]
             for j, v in enumerate(cells, 1):
                 ws.cell(r, j, v)
             r += 1
@@ -891,7 +909,7 @@ def indiv_sps(K, W):
         out.append(f"* {lab}.")
         names = []
         for code, (kind, thr) in A.CHANGE_THRESH.items():
-            g = A.MAIN[code][3]
+            g = A.MAIN[code][3] or -1
             ch = f"({code}_{suf} - {code}_T1) / {code}_T1" if kind == "rel" else f"({code}_{suf} - {code}_T1)"
             v = f"CH_{code}_{suf}"
             names.append(v)
@@ -901,8 +919,21 @@ def indiv_sps(K, W):
             v = f"WL{t}_{suf}"
             names.append(v)
             out.append(f"COMPUTE {v} = ((WEIGHT_{suf} - WEIGHT_T1) / WEIGHT_T1 * 100 <= -{t} + 1E-9).")
-        out.append(f"VALUE LABELS {' '.join(n for n in names if n.startswith('CH_'))} -1 '變差' 0 '持平' 1 '改善'"
-                   f" /{' '.join(n for n in names if n.startswith('WL'))} 0 '否' 1 '是'.")
+        th = A.COMP_THRESH
+        ct = f"CT_{suf}"
+        out.append(f"COMPUTE #dF = (WEIGHT_{suf} * FATP_{suf} - WEIGHT_T1 * FATP_T1) / 100.\nCOMPUTE #dM = PMM_{suf} - PMM_T1.\n"
+                   f"COMPUTE #f = (#dF >= {th} - 1E-9) - (#dF <= -{th} + 1E-9).\nCOMPUTE #m = (#dM >= {th} - 1E-9) - (#dM <= -{th} + 1E-9).\n"
+                   f"DO IF #f = -1.\n  COMPUTE {ct} = 1 + 3 * (#m = -1).\nELSE IF #f = 1.\n  COMPUTE {ct} = 7 - 2 * (#m = 1).\n"
+                   f"ELSE.\n  COMPUTE {ct} = 3 - (#m = 1) + 3 * (#m = -1).\nEND IF.")
+        for t in A.WEIGHT_LOSS_TARGETS:
+            v = f"WLK{t}_{suf}"
+            out.append(f"COMPUTE {v} = WL{t}_{suf} * (#m > -1).")
+            names.append(v)
+        names.append(ct)
+        out.append(f"VALUE LABELS {' '.join(n for n in names if n.startswith('CH_') and A.MAIN[n.split('_')[1]][3])} -1 '變差' 0 '持平' 1 '改善'"
+                   f" /{' '.join(n for n in names if n.startswith('CH_') and not A.MAIN[n.split('_')[1]][3])} -1 '上升' 0 '持平' 1 '下降'"
+                   f" /{' '.join(n for n in names if n.startswith('WL'))} 0 '否' 1 '是'"
+                   f" /{ct} " + " ".join(f"{i + 1} '{nm}'" for i, (_, nm, _, _) in enumerate(A.COMP_TYPES)) + ".")
         out.append("EXECUTE.")
         if cond:
             out.append(f"TEMPORARY.\nSELECT IF {cond}.")

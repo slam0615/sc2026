@@ -40,6 +40,9 @@ def summary_table(res):
     last = (st.get("indiv") or {}).get("last") or {}
     for t in ("3", "5"):
         row[f"體重減少≥{t}%(%)"] = round(100 * last["weight_loss"][t] / last["n"], 1) if last.get("weight_loss") else None
+        row[f"體重減少≥{t}%且肌肉未減(%)"] = round(100 * last["weight_loss_keep"][t] / last["n"], 1) if last.get("weight_loss_keep") else None
+    for g, lab in (("good", "組成有利"), ("mixed", "組成需注意"), ("bad", "組成不利")):
+        row[f"{lab}(%)"] = round(100 * last["comp_group"][g] / last["n"], 1) if last.get("comp_group") else None
     return pd.DataFrame([row])
 
 

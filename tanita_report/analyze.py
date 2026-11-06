@@ -42,8 +42,9 @@ WAVE_NAMES = {2: ["前測", "後測"], 3: ["前測", "後測", "追蹤測"]}
 # ---------------------------------------------------------------- 欄位定義
 # code: (中文名稱, 單位, 小數位, 期望方向 -1=下降有利 / +1=上升有利 / 0=不判定, 說明)
 MAIN = {
-    "BMI":    ("BMI", "kg/m²", 1, -1, "身體質量指數＝體重(kg) ÷ 身高(m)²"),
-    "WEIGHT": ("體重", "kg", 1, -1, "已扣除衣物重量"),
+    # BMI、體重只呈現方向（0）：上升可能來自增肌、下降可能來自肌肉流失，好壞改由身體組成（脂肪量、肌肉量）判定
+    "BMI":    ("BMI", "kg/m²", 1, 0, "身體質量指數＝體重(kg) ÷ 身高(m)²；變化只看方向，好壞以身體組成判定"),
+    "WEIGHT": ("體重", "kg", 1, 0, "已扣除衣物重量；變化只看方向，好壞以身體組成判定"),
     "FATP":   ("體脂率", "%", 1, -1, "體脂肪量占體重的百分比"),
     "PMM":    ("總體肌肉量", "kg", 1, +1, "TANITA 推定肌肉量（含骨骼肌、平滑肌及其水分）"),
     "VFATL":  ("內臟脂肪等級", "等級", 0, -1, "TANITA 原廠等級（1–59）；1–9 標準、10–14 偏高、≥15 過高"),
@@ -82,6 +83,30 @@ BMI_CATS = ["過輕", "正常", "過重", "肥胖"]
 CHANGE_THRESH = {"BMI": ("rel", 0.01), "WEIGHT": ("rel", 0.01), "FATP": ("abs", 1.0), "PMM": ("rel", 0.01), "VFATL": ("abs", 1.0)}
 WEIGHT_LOSS_TARGETS = [3, 5]   # 體重減少 ≥ 3%、≥ 5%
 EPS = 1e-9                      # 邊界比較的容許誤差（Excel、SPSS 用同一值）
+# 身體組成變化類型：脂肪量（體重 × 體脂率 ÷ 100）與總體肌肉量的變化，各以 ±COMP_THRESH kg 判定增加／持平／減少
+COMP_THRESH = 0.5
+COMP_TYPES = [  # (代碼, 名稱, 判讀, 說明)
+    ("fat_loss", "減脂保肌", "good", "脂肪量減少，肌肉量持平或增加"),
+    ("muscle_gain", "增肌", "good", "脂肪量持平，肌肉量增加"),
+    ("stable", "持平", "neutral", "脂肪量、肌肉量變化皆小於門檻"),
+    ("both_down", "脂肪、肌肉皆減少", "mixed", "減重但伴隨肌肉流失"),
+    ("both_up", "脂肪、肌肉皆增加", "mixed", "體重上升，肌肉與脂肪皆增加"),
+    ("muscle_loss", "肌肉流失", "bad", "脂肪量持平，肌肉量減少"),
+    ("fat_gain", "增脂", "bad", "脂肪量增加，肌肉量持平或減少"),
+]
+
+
+def comp_type(f, m):
+    """f、m：脂肪量、肌肉量的變化方向（−1 減少／0 持平／1 增加）。"""
+    if f == -1:
+        return "both_down" if m == -1 else "fat_loss"
+    if f == 1:
+        return "both_up" if m == 1 else "fat_gain"
+    return "muscle_gain" if m == 1 else "muscle_loss" if m == -1 else "stable"
+
+
+def tri(d, thr):
+    return 1 if d >= thr - EPS else -1 if d <= -thr + EPS else 0
 VFAT_CATS = ["標準 (1–9)", "偏高 (10–14)", "過高 (≥15)"]
 
 
@@ -457,9 +482,9 @@ def strata_keys(by_sex=True):
 
 
 def change_class(a, b, code):
-    """個人變化分類：1＝改善、0＝持平、−1＝變差（依 CHANGE_THRESH 與指標的期望方向）。"""
+    """個人變化分類：1＝改善（BMI、體重為下降）、0＝持平、−1＝變差（BMI、體重為上升）。"""
     kind, thr = CHANGE_THRESH[code]
-    good = MAIN[code][3]
+    good = MAIN[code][3] or -1
     d = (b - a) / a if kind == "rel" else b - a
     if d * good >= thr - EPS:
         return 1
@@ -476,9 +501,21 @@ def indiv_change(a_vals, b_vals):
         return out
     for code in MAIN:
         cl = [change_class(a, b, code) for a, b in zip(a_vals[code], b_vals[code])]
-        out[code] = dict(improve=cl.count(1), stable=cl.count(0), worse=cl.count(-1))
-    pct = (np.asarray(b_vals["WEIGHT"]) - np.asarray(a_vals["WEIGHT"])) / np.asarray(a_vals["WEIGHT"]) * 100
+        out[code] = (dict(improve=cl.count(1), stable=cl.count(0), worse=cl.count(-1)) if MAIN[code][3]
+                     else dict(down=cl.count(1), stable=cl.count(0), up=cl.count(-1)))
+    wa, wb = np.asarray(a_vals["WEIGHT"], float), np.asarray(b_vals["WEIGHT"], float)
+    dF = (wb * np.asarray(b_vals["FATP"], float) - wa * np.asarray(a_vals["FATP"], float)) / 100
+    dM = np.asarray(b_vals["PMM"], float) - np.asarray(a_vals["PMM"], float)
+    fm = [tri(x, COMP_THRESH) for x in dF]
+    mm = [tri(x, COMP_THRESH) for x in dM]
+    types = [comp_type(f, m) for f, m in zip(fm, mm)]
+    out["comp"] = {k: types.count(k) for k, *_ in COMP_TYPES}
+    out["comp_group"] = {g: sum(out["comp"][k] for k, _, gg, _ in COMP_TYPES if gg == g) for g in ("good", "neutral", "mixed", "bad")}
+    out["fat_mass_mean"] = float(dF.mean())
+    out["muscle_mean"] = float(dM.mean())
+    pct = (wb - wa) / wa * 100
     out["weight_loss"] = {str(t): int((pct <= -t + EPS).sum()) for t in WEIGHT_LOSS_TARGETS}
+    out["weight_loss_keep"] = {str(t): int(((pct <= -t + EPS) & (np.asarray(mm) >= 0)).sum()) for t in WEIGHT_LOSS_TARGETS}
     out["weight_pct_mean"] = float(pct.mean())
     return out
 
@@ -630,7 +667,8 @@ def run(path, name=None, by_sex=True):
                     hidden_fat=int(((ww.BMI < 24) & (ww.fat == 1)).sum()))
     out["status"] = [status(D["by_wave"][w]) for w in range(1, K + 1)]
     out["lmm"] = lmm_sensitivity(D)
-    out["change_rules"] = dict(thresh={k: list(v) for k, v in CHANGE_THRESH.items()}, weight_loss=WEIGHT_LOSS_TARGETS)
+    out["change_rules"] = dict(thresh={k: list(v) for k, v in CHANGE_THRESH.items()}, weight_loss=WEIGHT_LOSS_TARGETS, comp_thresh=COMP_THRESH,
+                               comp_types=[dict(code=k, name=n, group=g, note=t) for k, n, g, t in COMP_TYPES])
     out = clean(out)
     out["evaluation"] = build_evaluation(out)
     return D, out
@@ -719,8 +757,10 @@ def build_evaluation(o):
     il = allst.get("indiv", {}).get("last", {})
     if il.get("weight_loss"):
         wl = il["weight_loss"]
-        txt += (f"以個人來看，{il['n']} 位納入分析者從前測到最後一次量測，體重減少 3% 以上者 {wl['3']} 人（{100 * wl['3'] / il['n']:.1f}%）、"
-                f"減少 5% 以上者 {wl['5']} 人（{100 * wl['5'] / il['n']:.1f}%）。")
+        cg, nn_ = il["comp_group"], il["n"]
+        txt += (f"以個人身體組成來看，{nn_} 位納入分析者從前測到最後一次量測，屬「減脂保肌或增肌」者 {cg['good']} 人（{100 * cg['good'] / nn_:.1f}%）、"
+                f"「增脂或肌肉流失」者 {cg['bad']} 人（{100 * cg['bad'] / nn_:.1f}%）、脂肪與肌肉同增同減者 {cg['mixed']} 人；"
+                f"體重減少 3% 以上者 {wl['3']} 人（{100 * wl['3'] / nn_:.1f}%），其中肌肉量未減少者 {il['weight_loss_keep']['3']} 人。")
     if strat:
         txt += "分層檢定中，" + "；".join(strat) + "隨時間有顯著變化。"
     inter = []
