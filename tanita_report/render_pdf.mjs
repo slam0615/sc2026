@@ -15,7 +15,7 @@ const small = 'font-size:8px;color:#6f7e82;width:100%;padding:0 13mm;font-family
 await page.pdf({
   path: out, format: 'A4', printBackground: true, preferCSSPageSize: true,
   displayHeaderFooter: true,
-  headerTemplate: `<div style='${small}'><span>${head}　身體組成追蹤總體報告</span><span>TANITA 身體組成分析</span></div>`,
+  headerTemplate: `<div style='${small}'><span>${head}　臺北市12週健康促進介入計畫-成果報告</span><span>TANITA 身體組成分析</span></div>`,
   footerTemplate: `<div style='${small}'><span>僅呈現彙總統計，不含個人資料</span><span>第 <span class="pageNumber"></span> / <span class="totalPages"></span> 頁</span></div>`,
 });
 await browser.close();

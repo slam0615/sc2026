@@ -145,7 +145,9 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
   .ci::before{content:"("}.ci::after{content:")"}
   .chip{font-size:7.4pt;padding:0 6px}
   .nobreak-print{break-before:auto!important}
-  #s-overview,#s-kpi,#s-cat,#s-chisq-wrap{break-inside:avoid}
+  #s-kpi,#s-att{break-inside:avoid}
+  #s-chisq .card,#chisq-table table,#s-strata .card{break-inside:auto}
+  #trend .card,#s-strata .card .mini{break-inside:avoid}
   .mini-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
   .mini{padding:6px 8px!important}
   .mini .mt{font-size:8.5pt!important}
@@ -166,8 +168,8 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 <div class="stripe" aria-hidden="true"><i style="background:#FF8243"></i><i style="background:#FFC0CB"></i><i style="background:#FCE883"></i><i style="background:#069494"></i></div>
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow">TANITA 身體組成分析 ・ 職場總體報告</div>
-    <h1 id="title">職場身體組成追蹤總體報告</h1>
+    <div class="eyebrow" id="eyebrow">TANITA 身體組成分析</div>
+    <h1 id="title"></h1>
     <div class="meta" id="meta"></div>
   </div>
 </header>
@@ -175,7 +177,7 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 <main class="wrap">
   <section id="s-eval">
     <h2><span class="num">1</span>總體評價與建議</h2>
-    <p class="sub">依據衛生福利部國民健康署現行公告之健康體位標準與健康生活建議，以全體受測者的彙總資料評估，不呈現任何個人資料。</p>
+    <p class="sub">依據衛生福利部國民健康署現行公告之健康體位標準與健康生活建議，以全體參加者的彙總資料評估，不呈現任何個人資料。</p>
     <div class="verdict" id="verdict"></div>
     <div class="grid g2" id="findings"></div>
     <h3 style="font-size:17px;margin:22px 0 10px">建議事項</h3>
@@ -183,13 +185,13 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
     <ol class="sources" id="sources"></ol>
   </section>
 
-  <section id="s-overview">
-    <h2><span class="num">2</span>受測概況</h2>
+  <section id="s-overview" class="pb">
+    <h2><span class="num">2</span>計畫概況</h2>
     <p class="sub" id="ov-sub"></p>
     <div class="grid g4" id="ov-tiles"></div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><div style="font-weight:500">參與情形</div><div class="flowbar" id="flowbar"></div><div class="tbl-wrap" id="ov-flow"></div></div>
-      <div class="card"><div style="font-weight:500;margin-bottom:6px">受測者組成（人）</div><div class="tbl-wrap" id="ov-comp"></div>
+      <div class="card"><div style="font-weight:500;margin-bottom:6px">參加者組成（人）</div><div class="tbl-wrap" id="ov-comp"></div>
         <div style="font-weight:500;margin:12px 0 4px">資料處理說明</div><ul id="ov-log" style="margin:0;padding-left:18px;font-size:13.5px;color:var(--ink2)"></ul></div>
     </div>
   </section>
@@ -204,36 +206,30 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
   <p class="print-only foot" id="print-scope"></p>
 
   <section id="s-kpi">
-    <h2><span class="num">3</span>重點指標變化</h2>
+    <h2><span class="num">3</span>主要成果</h2>
     <p class="sub" id="kpi-sub"></p>
     <div id="kpi-body"></div>
   </section>
 
-  <section id="s-mini" class="pb">
-    <h2><span class="num">4</span>各指標三次量測趨勢</h2>
-    <p class="sub">完成全部量測者相對 T1 的平均變化量（0 = 與 T1 相同），直線為 Bonferroni 校正 95% 信賴區間；跨過 0 表示該次與 T1 無顯著差異。外框標色表示三次整體檢定 p &lt; 0.05。</p>
-    <div class="mini-grid" id="mini"></div>
+  <section id="s-trend" class="pb">
+    <h2><span class="num">4</span>趨勢圖</h2>
+    <p class="sub" id="trend-sub"></p>
+    <div class="grid g2" id="trend"></div>
   </section>
 
-  <section id="s-single" class="no-print">
-    <h2><span class="num">◎</span>單一指標檢視</h2>
-    <p class="sub">選擇一項指標，比較「完成全部量測者」與「全部可用資料（混合模型估計）」的趨勢，並查看各分層的變化。</p>
-    <div class="picker"><label for="ind-sel" style="font-size:14px;color:var(--ink2)">指標</label><select id="ind-sel"></select></div>
-    <div class="grid g2">
-      <div class="card"><div style="font-weight:500">平均值與 95% 信賴區間</div><div class="legend" id="single-legend" style="margin-top:6px"></div><div class="chart" id="single-line"></div><div class="foot" id="single-foot"></div></div>
-      <div class="card"><div style="font-weight:500" id="strata-title">各分層 T1 → 最後一次的平均變化量</div><div class="foot" id="strata-note" style="margin:2px 0 6px"></div><div class="chart" id="single-strata"></div></div>
-    </div>
-  </section>
-
-  <section id="s-table" class="pb">
-    <h2><span class="num">5</span>多次量測比較表（重複測量變異數分析）</h2>
-    <p class="sub">對象為完成全部量測者。平均值 ± 標準差；違反球形假設（Mauchly p &lt; 0.05）時採 Greenhouse-Geisser 校正。事後比較採 Bonferroni 校正。粗體為達顯著。</p>
-    <div class="card"><div class="tbl-wrap" id="rm-table"></div><div class="foot" id="rm-foot"></div></div>
+  <section id="s-test" class="pb">
+    <h2><span class="num">5</span>檢定分析</h2>
+    <p class="sub">粗體表示達統計顯著（p &lt; 0.05）。* p &lt; 0.05、** p &lt; 0.01、*** p &lt; 0.001。</p>
+    <div class="card"><div style="font-weight:500;margin-bottom:2px">5-1　三次皆參加者：重複測量變異數分析</div>
+      <div class="foot" style="margin:0 0 8px" id="rm-note"></div><div class="tbl-wrap" id="rm-table"></div></div>
+    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:2px">5-2　納入參加兩次者：與前測的配對比較</div>
+      <div class="foot" style="margin:0 0 8px">凡前測與該次皆有量測者皆納入（包含只參加兩次的人）；配對 t 檢定，變化量 = 該次 − 前測，括號內為 95% 信賴區間。Wilcoxon 符號等級檢定為無母數參考。</div>
+      <div class="tbl-wrap" id="avail-table"></div></div>
   </section>
 
   <section id="s-cat" class="pb">
-    <h2><span class="num">6</span>健康分級分布變化</h2>
-    <p class="sub">長條圖為每次量測的全部受測者；風險分類的變化檢定以完成全部量測者進行（Cochran's Q 檢定，兩兩比較採 McNemar 精確檢定並以 Bonferroni 校正）。</p>
+    <h2><span class="num">6</span>健康分級變化</h2>
+    <p class="sub">長條圖為每次量測的全部參加者。風險比例變化：三次皆參加者以 Cochran's Q 檢定；並以前測與該次皆有量測者（含只參加兩次者）進行 McNemar 精確檢定。</p>
     <div class="grid g2">
       <div class="card"><div style="font-weight:500">BMI 分級（國民健康署成人健康體位標準）</div><div class="legend" id="lg-bmi" style="margin-top:6px"></div><div class="chart" id="cat-bmi"></div></div>
       <div class="card"><div style="font-weight:500">內臟脂肪等級（TANITA 原廠標準）</div><div class="legend" id="lg-vfat" style="margin-top:6px"></div><div class="chart" id="cat-vfat"></div></div>
@@ -243,38 +239,22 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 
   <section id="s-strata" class="pb">
     <h2><span class="num">7</span>分層分析：性別與年齡層</h2>
-    <p class="sub">各分層完成全部量測者的平均值變化（重複測量 ANOVA），以及「時間 × 分組」交互作用：檢定不同性別或年齡層的變化趨勢是否不同（線性混合模型，使用全部可用資料）。本節不受篩選影響。</p>
-    <div class="card"><div class="tbl-wrap" id="strata-sex"></div></div>
-    <div class="card" style="margin-top:14px"><div class="tbl-wrap" id="strata-age"></div></div>
-    <div class="foot">* p &lt; 0.05、** p &lt; 0.01、*** p &lt; 0.001。各分層 p 值為該分層三次量測的整體檢定（重複測量 ANOVA）。</div>
+    <p class="sub" id="strata-sub"></p>
+    <div class="card"><div style="font-weight:500">7-1　性別</div><div class="legend" id="lg-sex" style="margin-top:6px"></div><div class="mini-grid" id="sex-charts"></div><div class="tbl-wrap" id="strata-sex" style="margin-top:10px"></div></div>
+    <div class="card" style="margin-top:14px" id="age-card"><div style="font-weight:500">7-2　年齡層</div><div class="foot" id="age-foot" style="margin:2px 0 4px"></div><div class="legend" id="lg-age"></div><div class="mini-grid" id="age-charts"></div><div class="tbl-wrap" id="strata-age" style="margin-top:10px"></div></div>
   </section>
 
   <section id="s-chisq" class="pb">
     <h2><span class="num">8</span>各次量測風險分布：卡方檢定</h2>
-    <p class="sub">每次量測的全部受測者，檢定各風險分類比例在性別、年齡層之間是否不同。期望次數小於 5 的格子超過 20% 時，以 Fisher 精確檢定為判定依據。</p>
+    <p class="sub">每次量測的全部參加者，檢定各風險分類比例在性別、年齡層之間是否不同。期望次數小於 5 的格子超過 20% 時，以 Fisher 精確檢定為判定依據。為保護隱私，人數少於 <span class="minn"></span> 人的組別不顯示人數，但仍納入檢定。</p>
     <div class="card"><div class="tbl-wrap" id="chisq-table"></div></div>
-    <div class="card" style="margin-top:14px" id="s-chisq-wrap"><div style="font-weight:500;margin-bottom:6px">樣本代表性：T1 受測者中，完成全部量測 vs. 未完成者（T1 數值比較）</div><div class="tbl-wrap" id="att-table"></div><div class="foot" id="att-foot"></div></div>
-  </section>
-
-  <section id="s-sens" class="pb">
-    <h2><span class="num">9</span>補充分析：納入全部可用資料</h2>
-    <p class="sub">為避免只分析完成全部量測者造成偏誤，另以兩種方式納入缺測者資料：(1) 線性混合模型（個人隨機截距、REML、Satterthwaite 自由度）；(2) 每兩次量測之間，以兩次皆有量測者進行配對 t 檢定。兩兩比較皆採 Bonferroni 校正。本節為全體結果。</p>
-    <div class="card"><div style="font-weight:500;margin-bottom:6px">線性混合模型：估計平均值與整體檢定</div><div class="tbl-wrap" id="mixed-table"></div></div>
-    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">各配對可用資料：配對 t 檢定（Bonferroni 校正 p 值）</div><div class="tbl-wrap" id="avail-table"></div></div>
-  </section>
-
-  <section id="s-seg" class="pb">
-    <details id="seg-details">
-      <summary>10　分節身體組成（左右手、左右腳、軀幹）</summary>
-      <p class="sub">依目前篩選條件，完成全部量測者的平均值 ± 標準差與重複測量 ANOVA。</p>
-      <div class="tbl-wrap" id="seg-table"></div>
-    </details>
+    <div class="card" style="margin-top:14px" id="s-att"><div style="font-weight:500;margin-bottom:6px">樣本代表性：前測參加者中，三次皆參加 vs. 未完成者（前測值比較）</div><div class="tbl-wrap" id="att-table"></div><div class="foot" id="att-foot"></div></div>
   </section>
 
   <section id="s-method" class="pb method">
-    <h2><span class="num">11</span>方法、名詞與限制</h2>
+    <h2><span class="num">9</span>方法、名詞與限制</h2>
     <div class="card" id="method"></div>
-    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">指標名詞與單位（對照 TANITA MC-780 報告）</div><div class="tbl-wrap" id="glossary"></div></div>
+    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">指標名詞與單位</div><div class="tbl-wrap" id="glossary"></div></div>
   </section>
   <div class="footer" id="footer"></div>
 </main>
@@ -286,9 +266,10 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 const R = JSON.parse(document.getElementById('data').textContent);
 const PRINT = /[?&]print\b/.test(location.search);
 const C = {teal:'#069494', orange:'#FF8243', pink:'#FFC0CB', yellow:'#FCE883', ink:'#1c2a2e', ink2:'#46565b', muted:'#6f7e82', grid:'#edf0ef', line:'#e3e8e7', axis:'#c9d1cf'};
-const I = R.info, K = I.k, W = I.waves.map(w => w.label), MIN = R.min_n;
-const MAIN = R.fields.main, SEG = R.fields.seg, BIN = R.fields.binary;
-const F = Object.fromEntries([...MAIN, ...SEG].map(f => [f.code, f]));
+const AGE_COLORS = ['#7fcdc8', '#3aaba5', '#069494', '#05706f', '#034b4a'];
+const I = R.info, K = I.k, W = I.waves.map(w => w.label), MIN = R.min_n, AG = I.age_groups;
+const MAIN = R.fields.main, BIN = R.fields.binary;
+const F = Object.fromEntries(MAIN.map(f => [f.code, f]));
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fx = (v, d) => v == null ? '—' : Number(v).toLocaleString('zh-TW', {minimumFractionDigits: d, maximumFractionDigits: d});
@@ -297,14 +278,18 @@ const pf = p => p == null ? '—' : p < 0.001 ? '< 0.001' : p.toFixed(3);
 const stars = p => p == null ? '' : p < 0.001 ? '***' : p < 0.01 ? '**' : p < 0.05 ? '*' : '';
 const pb = (p, sig = p != null && p < 0.05) => `<span class="${sig ? 'p-sel' : 'p-alt'}" style="${sig ? 'font-weight:700' : ''}">${pf(p)}${stars(p)}</span>`;
 const dd = f => Math.max(f.dec, 1) + 1;
-const ageLab = g => g.startsWith('<') ? `未滿 ${g.slice(1)} 歲` : g.startsWith('≥') ? `${g.slice(1)} 歲以上` : `${g.replace('-', '–')} 歲`;
-const state = {sex: 'all', age: 'all', ind: 'FATP'};
-const tq = (df, a = 0.05) => { const z = {0.05: 1.959964}[a] || 1.959964; return z + (z ** 3 + z) / (4 * df) + (5 * z ** 5 + 16 * z ** 3 + 3 * z) / (96 * df * df) + (3 * z ** 7 + 19 * z ** 5 + 17 * z ** 3 - 15 * z) / (384 * df ** 3); };
+const ageLab = g => g.startsWith('≤') ? `${g.slice(1)} 歲（含）以下` : g.startsWith('≥') ? `${g.slice(1)} 歲以上` : `${g.replace('-', '–')} 歲`;
+const ageShort = g => g.startsWith('≤') ? `≤${g.slice(1)}` : g.startsWith('≥') ? `≥${g.slice(1)}` : g.replace('-', '–');
+const tq = df => { const z = 1.959964; return z + (z ** 3 + z) / (4 * df) + (5 * z ** 5 + 16 * z ** 3 + 3 * z) / (96 * df * df) + (3 * z ** 7 + 19 * z ** 5 + 17 * z ** 3 - 15 * z) / (384 * df ** 3); };
+const pairLabel = p => `${W[p.a - 1]}→${W[p.b - 1]}`;
+const state = {sex: 'all', age: 'all'};
+document.querySelectorAll('.minn').forEach(e => e.textContent = MIN);
 
 /* ---------- 標頭 ---------- */
-document.title = (I.workplace ? I.workplace + ' ' : '') + '身體組成總體報告';
-$('title').textContent = (I.workplace ? I.workplace + '｜' : '') + '職場身體組成追蹤總體報告';
-$('meta').innerHTML = I.waves.map(w => `<span>${w.label}　<b>${w.date}</b></span>`).join('') + `<span>儀器　<b>TANITA ${esc(I.model)}</b></span><span>受測人數　<b>${I.n_people} 人</b></span>`;
+document.title = `${I.workplace}｜${I.title}`;
+$('title').textContent = I.title;
+$('eyebrow').textContent = `${I.workplace} ・ TANITA 身體組成分析`;
+$('meta').innerHTML = `<span>單位　<b>${esc(I.workplace)}</b></span>` + I.waves.map(w => `<span>${w.label}　<b>${w.date}</b>（第 ${w.week} 週）</span>`).join('') + `<span>參加人數　<b>${I.n_people} 人</b></span>`;
 
 /* ---------- 1 總體評價 ---------- */
 const E = R.evaluation, lvlName = {high: '需介入', mid: '需關注', low: '良好'}, ico = l => l === 'high' ? '▲' : l === 'mid' ? '●' : '✓';
@@ -314,26 +299,24 @@ $('findings').innerHTML = E.findings.map(f => `<div class="card finding"><h3>${e
 $('recs').innerHTML = E.recommendations.map(r => `<div class="rec"><h3>${esc(r.title)}</h3><p>${esc(r.text)}</p></div>`).join('');
 $('sources').innerHTML = E.sources.map(s => `<li>${esc(s)}</li>`).join('');
 
-/* ---------- 2 概況 ---------- */
-$('ov-sub').textContent = `共 ${I.n_people} 人、${I.n_records} 筆量測。間隔：` + I.intervals.map((d, i) => `${W[i]}→${W[i + 1]} ${d} 天`).join('、') + `。變化檢定以完成全部 ${K} 次量測的 ${I.n_complete} 人為主，並以全部可用資料做補充分析。`;
+/* ---------- 2 計畫概況 ---------- */
+$('ov-sub').textContent = `${I.program_weeks} 週計畫，共 ${I.n_people} 人參加、${I.n_records} 筆量測。` + I.intervals.map((d, i) => `${W[i]}至${W[i + 1]}間隔 ${d} 天`).join('、') + '。';
 const tile = (lab, val, unit, note) => `<div class="card tile"><div class="lab">${lab}</div><div class="val">${val}<small>${unit}</small></div><div class="note">${note || ''}</div></div>`;
-$('ov-tiles').innerHTML = I.waves.map(w => tile(`${w.label} 受測人數`, w.n, '人', w.date === w.date_end ? w.date : `${w.date}～${w.date_end}`)).join('')
-  + tile(`完成全部 ${K} 次`, I.n_complete, '人', `占受測者 ${(100 * I.n_complete / I.n_people).toFixed(0)}%`);
+$('ov-tiles').innerHTML = I.waves.map(w => tile(`${w.label}（第 ${w.week} 週）`, w.n, '人', w.date === w.date_end ? w.date : `${w.date}～${w.date_end}`)).join('')
+  + tile('三次皆參加', I.n_complete, '人', `占參加者 ${(100 * I.n_complete / I.n_people).toFixed(0)}%`);
 {
   const cols = [C.teal, '#5fbdb8', C.orange, '#ffb08a', C.pink, C.yellow, '#d9dedd'];
   const P = I.patterns, tot = I.n_people;
   $('flowbar').innerHTML = P.map((p, i) => `<i title="${p.pattern}：${p.n} 人" style="flex:${p.n};background:${cols[i % cols.length]}"></i>`).join('');
-  $('ov-flow').innerHTML = '<table><thead><tr><th>參與型態</th><th>人數</th><th>比例</th></tr></thead><tbody>' + P.map((p, i) =>
-    `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${cols[i % cols.length]};margin-right:6px"></i>${p.pattern.split('-').join(' → ')}${p.pattern.split('-').length === K ? '<span class="pill">完成全部</span>' : ''}</td><td>${p.n}</td><td>${(100 * p.n / tot).toFixed(1)}%</td></tr>`).join('') + '</tbody></table>';
-  const AG = I.age_groups;
-  let h = '<table><thead><tr><th>性別</th>' + AG.map(a => `<th>${ageLab(a)}</th>`).join('') + '<th>合計</th></tr></thead><tbody>';
-  for (const [k, lab] of [['sex:M', '男性'], ['sex:F', '女性']]) {
-    h += `<tr><td>${lab}</td>` + AG.map(a => { const s = R.strata[`${k}|age:${a}`]; return `<td>${s.n == null ? '&lt;' + MIN : s.n}</td>`; }).join('') + `<td>${R.strata[k].n ?? '&lt;' + MIN}</td></tr>`;
-  }
-  h += '<tr><td>合計</td>' + AG.map(a => `<td>${R.strata['age:' + a].n ?? '&lt;' + MIN}</td>`).join('') + `<td>${R.strata.all.n}</td></tr></tbody></table>`;
-  $('ov-comp').innerHTML = h;
-  $('ov-log').innerHTML = [...I.cleaning_log, '基礎代謝量原始單位為 kJ，已換算為 kcal（÷ 4.184）。',
-    `年齡層以首次量測年齡分組；任一分析人數少於 ${MIN} 人時不呈現，以保護個人隱私。`, '報告中不含任何可辨識個人之資料。'].map(l => `<li>${esc(l)}</li>`).join('');
+  $('ov-flow').innerHTML = '<table><thead><tr><th>參與型態</th><th>人數</th><th>比例</th><th>分析方式</th></tr></thead><tbody>' + P.map((p, i) => {
+    const use = p.waves === K ? '三次比較＋與前測配對' : p.pattern.startsWith(W[0]) && p.waves > 1 ? '與前測配對比較' : '僅列入各次描述';
+    return `<tr><td class="name"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${cols[i % cols.length]};margin-right:6px"></i>${esc(p.pattern)}</td><td>${p.n}</td><td>${(100 * p.n / tot).toFixed(1)}%</td><td style="text-align:left;color:var(--ink2)">${use}</td></tr>`; }).join('') + '</tbody></table>';
+  const cell = v => v == null ? `&lt;${MIN}` : v;
+  let h = '<table><thead><tr><th>性別</th>' + AG.map(a => `<th>${ageShort(a)}</th>`).join('') + '<th>合計</th></tr></thead><tbody>';
+  for (const [k, lab] of [['sex:M', '男性'], ['sex:F', '女性']]) h += `<tr><td class="name">${lab}</td>` + AG.map(a => `<td>${cell(R.strata[`${k}|age:${a}`].n)}</td>`).join('') + `<td>${cell(R.strata[k].n)}</td></tr>`;
+  h += '<tr><td class="name">合計</td>' + AG.map(a => `<td>${cell(R.strata['age:' + a].n)}</td>`).join('') + `<td>${R.strata.all.n}</td></tr></tbody></table>`;
+  $('ov-comp').innerHTML = h + `<div class="foot">年齡以首次量測年齡分組（歲）。少於 ${MIN} 人的格子以「&lt;${MIN}」表示。</div>`;
+  $('ov-log').innerHTML = [...I.cleaning_log, `任一分析人數少於 ${MIN} 人時不呈現統計結果，以保護個人隱私。`, '報告中不含任何可辨識個人之資料。'].map(l => `<li>${esc(l)}</li>`).join('');
 }
 
 /* ---------- 篩選 ---------- */
@@ -342,10 +325,10 @@ function segBtns(el, opts, key){
   el.onclick = e => { const b = e.target.closest('button'); if (!b) return; state[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); render(); };
 }
 segBtns($('f-sex'), [['all', '全部'], ['M', '男性'], ['F', '女性']], 'sex');
-segBtns($('f-age'), [['all', '全部'], ...I.age_groups.map(g => [g, g.startsWith('<') ? `未滿 ${g.slice(1)}` : g.startsWith('≥') ? `${g.slice(1)} 以上` : g.replace('-', '–')])], 'age');
+segBtns($('f-age'), [['all', '全部'], ...AG.map(g => [g, ageShort(g)])], 'age');
 const skey = () => state.sex === 'all' && state.age === 'all' ? 'all' : state.sex === 'all' ? 'age:' + state.age : state.age === 'all' ? 'sex:' + state.sex : `sex:${state.sex}|age:${state.age}`;
 
-/* ---------- tooltip & svg 工具 ---------- */
+/* ---------- 工具 ---------- */
 const tip = $('tip');
 function bindTip(svg){
   svg.addEventListener('pointermove', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.style.opacity = 0; return; }
@@ -358,63 +341,47 @@ const svgOpen = (w, h, label) => `<svg viewBox="0 0 ${w} ${h}" role="img" aria-l
 function niceTicks(lo, hi, n){ const span = hi - lo || 1, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
   const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= step0); const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10)); return out; }
 const tickDec = t => t.length > 1 ? Math.max(0, -Math.floor(Math.log10(t[1] - t[0]) + 1e-9)) : 0;
-function ciOf(rm, j){ const n = rm.n, h = tq(n - 1) * rm.sds[j] / Math.sqrt(n); return [rm.means[j] - h, rm.means[j] + h]; }
-function verdictChip(f, rm){
-  if (!rm || rm.p_final == null || rm.p_final >= 0.05) return '<span class="chip ns">無顯著</span>';
-  const d = rm.means[K - 1] - rm.means[0], good = f.good === 0 ? null : Math.sign(d) === f.good;
+const ciOf = (rm, j) => { const h = tq(rm.n - 1) * rm.sds[j] / Math.sqrt(rm.n); return [rm.means[j] - h, rm.means[j] + h]; };
+const rmSeries = (rm, name, color) => ({name, color, pts: rm.means.map((m, j) => { const c = ciOf(rm, j); return {m, lo: c[0], hi: c[1], n: rm.n}; })});
+function verdictChip(f, d, p){
+  if (p == null || p >= 0.05) return '<span class="chip ns">無顯著</span>';
+  const good = f.good === 0 ? null : Math.sign(d) === f.good;
   return `<span class="chip ${good === null ? 'mid' : good ? 'low' : 'high'}">${d > 0 ? '▲ 上升' : '▼ 下降'}${good === null ? '' : good ? '・有利' : '・不利'}</span>`;
 }
 
-/* ---------- 圖：折線（平均 ± 95% CI） ---------- */
+/* ---------- 折線圖（平均 ± 95% CI） ---------- */
 function lineChart(el, f, series, opt = {}){
-  const Wd = opt.w || 420, H = opt.h || 250, L = opt.l ?? 52, Rr = opt.r ?? 46, T = opt.t ?? 14, B = opt.b ?? 30;
+  const Wd = opt.w || 460, H = opt.h || 250, L = opt.l ?? 50, Rr = opt.r ?? 30, T = opt.t ?? 22, B = opt.b ?? 30, fs = opt.fs || 12;
   let lo = Infinity, hi = -Infinity;
   series.forEach(s => s.pts.forEach(p => { lo = Math.min(lo, p.lo); hi = Math.max(hi, p.hi); }));
-  const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.02 || 1; lo -= pad; hi += pad;
+  const pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.02 || 1; lo -= pad; hi += pad;
   const ticks = niceTicks(lo, hi, opt.ticks || 4); lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
-  const X = j => L + (Wd - L - Rr) * (K === 1 ? 0.5 : j / (K - 1)), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
-  const td = tickDec(ticks);
-  let g = svgOpen(Wd, H, f.name + '趨勢');
-  ticks.forEach(t => g += `<line x1="${L}" x2="${Wd - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="${C.grid}"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end" class="t-mut" style="font-size:${opt.fs || 12}px">${fx(t, td)}</text>`);
-  W.forEach((w, j) => g += `<text x="${X(j)}" y="${H - 8}" text-anchor="middle" style="font-size:${opt.fs || 12}px">${w}</text>`);
-  if (opt.zero && lo < 0 && hi > 0) g += `<line x1="${L}" x2="${Wd - Rr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C.axis}" stroke-width="1.2"/>`;
+  const X = j => L + (Wd - L - Rr) * (j / (K - 1)), Y = v => T + (hi - v) / (hi - lo) * (H - T - B), td = tickDec(ticks);
+  let g = svgOpen(Wd, H, f.name + '趨勢圖');
+  ticks.forEach(t => g += `<line x1="${L}" x2="${Wd - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="${C.grid}"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end" class="t-mut" style="font-size:${fs}px">${fx(t, td)}</text>`);
+  W.forEach((w, j) => g += `<text x="${X(j)}" y="${H - 9}" text-anchor="${j === 0 ? 'start' : j === K - 1 ? 'end' : 'middle'}" style="font-size:${fs}px">${w}</text>`);
   series.forEach((s, si) => {
-    const off = series.length > 1 ? (si - (series.length - 1) / 2) * 8 : 0;
-    g += `<polyline points="${s.pts.map((p, j) => `${X(j) + off},${Y(p.m)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash ? 'stroke-dasharray="5 4"' : ''} stroke-linejoin="round"/>`;
+    const off = series.length > 1 ? (si - (series.length - 1) / 2) * (opt.spread || 7) : 0;
+    g += `<polyline points="${s.pts.map((p, j) => `${X(j) + off},${Y(p.m)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
     s.pts.forEach((p, j) => { const x = X(j) + off;
-      g += `<line x1="${x}" x2="${x}" y1="${Y(p.lo)}" y2="${Y(p.hi)}" stroke="${s.color}" stroke-width="1.6" opacity=".75"/>`;
+      g += `<line x1="${x}" x2="${x}" y1="${Y(p.lo)}" y2="${Y(p.hi)}" stroke="${s.color}" stroke-width="1.6" opacity=".7"/>`;
       g += `<circle cx="${x}" cy="${Y(p.m)}" r="${opt.r0 || 5}" fill="${s.color}" stroke="#fff" stroke-width="2"/>`;
-      if (opt.labels && si === 0) g += `<text x="${x}" y="${Y(p.hi) - 6}" text-anchor="middle" class="t-ink" style="font-size:11.5px">${fx(p.m, dd(f))}</text>`;
-      g += `<rect x="${x - 18}" y="${T}" width="36" height="${H - T - B}" fill="transparent" data-tip="${esc(`<b>${s.name}・${W[j]}</b>　${esc(f.name)}<br>平均 ${fx(p.m, dd(f))} ${esc(f.unit)}<br>95% CI ${fx(p.lo, dd(f))} ~ ${fx(p.hi, dd(f))}<br>n = ${p.n}`)}"/>`; });
+      if (opt.labels) g += `<text x="${x + (j === K - 1 ? -10 : 10)}" y="${Y(p.m) - 8}" text-anchor="${j === K - 1 ? 'end' : 'start'}" class="t-ink" style="font-size:12px;font-weight:500">${fx(p.m, dd(f))}</text>`;
+      g += `<rect x="${x - 16}" y="${T}" width="32" height="${H - T - B}" fill="transparent" data-tip="${esc(`<b>${esc(s.name)}・${W[j]}</b>　${esc(f.name)}<br>平均 ${fx(p.m, dd(f))} ${esc(f.unit)}<br>95% CI ${fx(p.lo, dd(f))} ~ ${fx(p.hi, dd(f))}<br>n = ${p.n}`)}"/>`; });
+    if (opt.endLabels) g += `<text x="${X(K - 1) + off + 8}" y="${Y(s.pts[K - 1].m) + 4}" class="t-ink" style="font-size:${fs}px">${esc(s.short || s.name)}</text>`;
   });
-  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
-}
-const rmSeries = (rm, name, color) => ({name, color, pts: rm.means.map((m, j) => { const c = ciOf(rm, j); return {m, lo: c[0], hi: c[1], n: rm.n}; })});
-
-/* ---------- 圖：分層變化（點 + CI） ---------- */
-function strataDots(el, f){
-  const keys = [['all', '全體'], ['sex:M', '男性'], ['sex:F', '女性'], ...I.age_groups.map(g => ['age:' + g, ageLab(g)])];
-  const rows = keys.map(([k, l]) => ({k, l, st: R.strata[k]})).filter(r => r.st.rm).map(r => ({...r, rm: r.st.rm[f.code], pr: r.st.rm[f.code].pairs.find(p => p.a === 1 && p.b === K)}));
-  const Wd = 420, rowH = 34, T = 24, L = 100, Rr = 74, H = T + rows.length * rowH + 6;
-  const ext = Math.max(...rows.map(r => Math.max(Math.abs(r.pr.ci_lo), Math.abs(r.pr.ci_hi)))) * 1.1 || 1;
-  const ticks = niceTicks(-ext, ext, 4), x0 = Math.min(ticks[0], -ext), x1 = Math.max(ticks[ticks.length - 1], ext);
-  const X = v => L + (v - x0) / (x1 - x0) * (Wd - L - Rr);
-  let g = svgOpen(Wd, H, f.name + '各分層變化量');
-  ticks.forEach(t => g += `<line x1="${X(t)}" x2="${X(t)}" y1="${T - 6}" y2="${H - 4}" stroke="${t === 0 ? C.axis : C.grid}"/><text x="${X(t)}" y="${T - 11}" text-anchor="middle" class="t-mut">${t > 0 ? '+' : ''}${+t.toFixed(3)}</text>`);
-  rows.forEach((r, i) => { const y = T + i * rowH + rowH / 2, sig = r.rm.p_final < 0.05;
-    if (i === 1 || i === 3) g += `<line x1="0" x2="${Wd}" y1="${y - rowH / 2}" y2="${y - rowH / 2}" stroke="${C.line}"/>`;
-    g += `<text x="${L - 10}" y="${y + 3}" text-anchor="end" class="t-ink">${r.l}</text><text x="${L - 10}" y="${y + 15}" text-anchor="end" class="t-mut" style="font-size:10.5px">n=${r.rm.n}</text>`;
-    g += `<line x1="${X(r.pr.ci_lo)}" x2="${X(r.pr.ci_hi)}" y1="${y}" y2="${y}" stroke="${C.teal}" stroke-width="2" stroke-linecap="round"/>`;
-    g += `<circle cx="${X(r.pr.diff)}" cy="${y}" r="${sig ? 6.5 : 5}" fill="${sig ? C.teal : '#fff'}" stroke="${sig ? '#fff' : C.teal}" stroke-width="2"/>`;
-    g += `<text x="${Wd - Rr + 8}" y="${y + 4}" class="${sig ? 't-ink' : 't-mut'}">${sgn(r.pr.diff, dd(f))}${stars(r.rm.p_final)}</text>`;
-    g += `<rect x="0" y="${y - rowH / 2}" width="${Wd}" height="${rowH}" fill="transparent" data-tip="${esc(`<b>${r.l}</b>　${esc(f.name)}<br>T1 ${fx(r.rm.means[0], dd(f))} → ${W[K - 1]} ${fx(r.rm.means[K - 1], dd(f))}<br>變化 ${sgn(r.pr.diff, dd(f))}（Bonferroni 95% CI ${fx(r.pr.ci_lo, dd(f))} ~ ${fx(r.pr.ci_hi, dd(f))}）<br>三次整體 p = ${pf(r.rm.p_final)}　n = ${r.rm.n}`)}"/>`; });
+  if (opt.brackets) { // 兩兩比較標註（Bonferroni）
+    opt.brackets.forEach(b => { if (b.p >= 0.05) return;
+      const x1 = X(b.a - 1) + 4, x2 = X(b.b - 1) - 4, yy = T - 8 - (b.b - b.a > 1 ? 13 : 0);
+      g += `<path d="M${x1},${yy + 6} V${yy} H${x2} V${yy + 6}" fill="none" stroke="${C.ink2}" stroke-width="1"/><text x="${(x1 + x2) / 2}" y="${yy - 3}" text-anchor="middle" class="t-ink" style="font-size:11px">${stars(b.p)}</text>`; });
+  }
   el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
 }
 
-/* ---------- 圖：堆疊橫條（各波） ---------- */
+/* ---------- 堆疊橫條 ---------- */
 const CAT_COLORS = {bmi: [C.yellow, C.teal, C.pink, C.orange], vfat: [C.teal, C.pink, C.orange]};
 function stacked(el, cats, rows, colors, label){
-  const Wd = 420, L = 40, Rr = 6, barH = 24, gap = 14, T = 4, H = T + rows.length * (barH + gap);
+  const Wd = 420, L = 54, Rr = 6, barH = 24, gap = 14, T = 4, H = T + rows.length * (barH + gap);
   let g = svgOpen(Wd, H, label);
   rows.forEach((arr, ri) => {
     const n = arr.reduce((a, b) => a + b, 0), y = T + ri * (barH + gap), w = Wd - L - Rr; let x = L;
@@ -423,144 +390,135 @@ function stacked(el, cats, rows, colors, label){
     const segs = arr.map((v, i) => ({v, i})).filter(o => o.v > 0);
     segs.forEach((o, j) => { const sw = o.v / n * w - (j < segs.length - 1 ? 2 : 0), pct = o.v / n * 100;
       g += `<rect x="${x}" y="${y}" width="${Math.max(sw, .5)}" height="${barH}" rx="${segs.length === 1 || j === 0 || j === segs.length - 1 ? 4 : 0}" fill="${colors[o.i]}" data-tip="${esc(`<b>${W[ri]}・${cats[o.i]}</b><br>${o.v} 人（${pct.toFixed(1)}%）／ ${n} 人`)}"/>`;
-      const txt = `${o.v}（${pct.toFixed(0)}%）`;
-      if (sw > [...txt].reduce((a, ch) => a + (ch.charCodeAt(0) > 0x2E80 ? 11.5 : 6.6), 0) + 8) g += `<text x="${x + sw / 2}" y="${y + barH / 2 + 4}" text-anchor="middle" style="fill:${colors[o.i] === C.teal ? '#fff' : C.ink};font-size:11.5px;pointer-events:none">${txt}</text>`;
+      const txt = `${pct.toFixed(0)}%`;
+      if (sw > txt.length * 7 + 8) g += `<text x="${x + sw / 2}" y="${y + barH / 2 + 4}" text-anchor="middle" style="fill:${colors[o.i] === C.teal ? '#fff' : C.ink};font-size:11.5px;pointer-events:none">${txt}</text>`;
       x += sw + 2; });
   });
   el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
 }
 const legendHTML = (cats, colors) => cats.map((c, i) => `<span><i style="background:${colors[i]}"></i>${esc(c)}</span>`).join('');
 
-/* ---------- 表格 ---------- */
-const pairLabel = p => `${W[p.a - 1]}–${W[p.b - 1]}`;
-function rmTable(fields, rms){
-  const pairs = rms[fields[0].code].pairs;
-  let h = `<table><thead><tr><th>指標（單位）</th><th>n</th>${W.map(w => `<th>${w}</th>`).join('')}<th>F 值</th><th>整體<br>p 值</th><th>偏 η²</th><th>Friedman<br>p 值</th>${pairs.map(p => `<th>${pairLabel(p)}<br>p 值</th>`).join('')}<th>判定</th></tr></thead><tbody>`;
-  fields.forEach(f => { const s = rms[f.code], d = dd(f);
-    const df = s.use_gg ? `${fx(s.df1_gg, 2)}, ${fx(s.df2_gg, 2)}` : `${s.df1}, ${s.df2}`;
-    h += `<tr class="${s.p_final < 0.05 ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td><td>${s.n}</td>`
-      + s.means.map((m, j) => `<td>${fx(m, d)}<span class="ci">± ${fx(s.sds[j], d)}</span></td>`).join('')
-      + `<td>${fx(s.F, 2)}<span class="ci">df ${df}${s.use_gg ? '・GG' : ''}</span></td><td>${pb(s.p_final)}</td><td>${fx(s.pes, 3)}</td><td>${pb(s.friedman_p, false)}</td>`
-      + s.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('') + `<td>${verdictChip(f, s)}</td></tr>`; });
-  return h + '</tbody></table>';
+/* ---------- 7 分層（靜態） ---------- */
+function strataBlock(groups, chartsEl, tableEl, by){
+  const ok = groups.filter(g => R.strata[g.key].rm);
+  $(chartsEl).innerHTML = MAIN.map(f => `<div class="mini"><div class="mt"><span>${esc(f.name)}</span><small>${esc(f.unit)}${R.interaction[f.code][by] ? `・交互作用 p=${pf(R.interaction[f.code][by].p_final)}${stars(R.interaction[f.code][by].p_final)}` : ''}</small></div><div class="chart" id="${chartsEl}-${f.code}"></div></div>`).join('');
+  MAIN.forEach(f => lineChart($(`${chartsEl}-${f.code}`), f, ok.map(g => ({...rmSeries(R.strata[g.key].rm[f.code], g.label, g.color), short: g.short})),
+    {w: 250, h: 150, l: 38, r: 14, t: 10, b: 22, fs: 10.5, r0: 3.5, ticks: 3, spread: 5}));
+  let h = `<table><thead><tr><th>指標（單位）</th>${groups.map(g => `<th>${esc(g.label)}<br><span style="font-weight:400">三次皆參加 ${R.strata[g.key].rm ? R.strata[g.key].n_complete : '&lt;' + MIN} 人</span></th>`).join('')}<th>時間 × ${by === 'sex' ? '性別' : '年齡層'}<br>交互作用 p 值</th></tr></thead><tbody>`;
+  MAIN.forEach(f => { const d = dd(f), it = R.interaction[f.code][by];
+    h += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + groups.map(g => { const st = R.strata[g.key];
+      if (!st.rm) return '<td class="p-alt">人數不足</td>'; const s = st.rm[f.code];
+      return `<td class="${s.p_final < 0.05 ? 'p-sel' : ''}">${s.means.map(m => fx(m, d)).join(' → ')}<span class="ci">p = ${pf(s.p_final)}${stars(s.p_final)}</span></td>`; }).join('')
+      + `<td>${it ? pb(it.p_final) : '—'}${it && it.use_gg ? '<sup>GG</sup>' : ''}</td></tr>`; });
+  $(tableEl).innerHTML = h + '</tbody></table>';
 }
-function strataTable(el, groups, title, by){
-  let h = `<table><thead><tr><th>指標（單位）</th>${groups.map(([k, l]) => `<th>${l}<br><span style="font-weight:400">完成 ${R.strata[k].n_complete ?? '—'} 人</span></th>`).join('')}<th>時間 × ${by === 'sex' ? '性別' : '年齡層'}<br>交互作用 p 值</th></tr></thead><tbody>`;
-  MAIN.forEach(f => { const d = dd(f), it = (R.interaction[f.code] || {})[by];
-    h += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + groups.map(([k]) => { const st = R.strata[k];
-      if (!st.rm) return '<td class="p-alt">人數不足</td>'; const s = st.rm[f.code], pr = s.pairs.find(p => p.a === 1 && p.b === K);
-      return `<td class="${s.p_final < 0.05 ? 'p-sel' : ''}">${fx(s.means[0], d)} → ${fx(s.means[K - 1], d)}<span class="ci">變化 ${sgn(pr.diff, d)}・p = ${pf(s.p_final)}${stars(s.p_final)}</span></td>`; }).join('')
-      + `<td>${it ? pb(it.p) : '—'}</td></tr>`; });
-  el.innerHTML = `<div style="font-weight:500;margin-bottom:6px">${title}</div>` + h + '</tbody></table>';
-}
+$('strata-sub').textContent = `以三次皆參加者分析：各分層的${W.join('→')}平均值與重複測量 ANOVA p 值；「時間 × 分組」交互作用檢定不同性別或年齡層的變化趨勢是否不同（混合設計 ANOVA）。本節不受篩選影響。`;
+const sexGroups = [{key: 'sex:M', label: '男性', short: '男', color: C.teal}, {key: 'sex:F', label: '女性', short: '女', color: C.orange}];
+$('lg-sex').innerHTML = legendHTML(['男性', '女性'], [C.teal, C.orange]);
+strataBlock(sexGroups, 'sex-charts', 'strata-sex', 'sex');
+const ageGroups = AG.map((g, i) => ({key: 'age:' + g, label: ageLab(g), short: ageShort(g), color: AGE_COLORS[i]})).filter(g => R.strata[g.key].n !== 0);
+$('lg-age').innerHTML = legendHTML(ageGroups.filter(g => R.strata[g.key].rm).map(g => g.label), ageGroups.filter(g => R.strata[g.key].rm).map(g => g.color));
+strataBlock(ageGroups, 'age-charts', 'strata-age', 'age');
+$('age-foot').textContent = `三次皆參加者少於 ${MIN} 人的年齡層不繪製趨勢、不列出數值，但仍納入交互作用檢定。顏色由淺至深代表年齡由低至高。`;
 
-/* ---------- 靜態區塊 ---------- */
-strataTable($('strata-sex'), [['sex:M', '男性'], ['sex:F', '女性']], `依性別：T1 → ${W[K - 1]} 平均值（完成全部量測者）`, 'sex');
-strataTable($('strata-age'), I.age_groups.map(g => ['age:' + g, ageLab(g)]), `依年齡層：T1 → ${W[K - 1]} 平均值（完成全部量測者）`, 'age');
+/* ---------- 8 卡方、代表性 ---------- */
 {
-  let h = '<table><thead><tr><th>量測</th><th>風險分類</th><th>分組</th><th>各組符合人數／人數（%）</th><th>χ²</th><th>自由度</th><th>卡方 p 值</th><th>Fisher 精確<br>p 值</th></tr></thead><tbody>';
+  let h = '<table><thead><tr><th>量測</th><th>風險分類</th><th>分組</th><th>各組符合比例</th><th>χ²</th><th>自由度</th><th>卡方 p 值</th><th>Fisher 精確<br>p 值</th></tr></thead><tbody>';
   R.chisq.forEach(x => { const useF = x.use_fisher;
-    const groups = x.rows.map((r, i) => { const [a, b] = x.observed[i]; return `${esc(x.by === '年齡層' ? ageLab(r) : r)} ${a}/${a + b}（${(100 * a / (a + b || 1)).toFixed(1)}%）`; }).join('<br>');
-    h += `<tr><td>${W[x.wave - 1]}</td><td class="name" style="white-space:normal;min-width:140px">${esc(x.outcome_name)}</td><td>${x.by}</td><td style="text-align:left">${groups}</td><td>${fx(x.chi2, 2)}</td><td>${x.df ?? '—'}</td>
-      <td>${pb(x.p, !useF && x.p < 0.05)}</td><td>${pb(x.p_fisher, useF && x.p_fisher < 0.05)}</td></tr>`; });
+    const groups = x.rows.map((r, i) => { const [a, b] = x.observed[i]; const n = a + b;
+      return `${esc(x.by === '年齡層' ? ageShort(r) + ' 歲' : r)}　${n < MIN ? `（&lt;${MIN} 人）` : `${(100 * a / n).toFixed(1)}%（${a}/${n}）`}`; }).join('<br>');
+    h += `<tr><td>${W[x.wave - 1]}</td><td class="name" style="white-space:normal;min-width:140px">${esc(x.outcome_name)}</td><td>${x.by}</td><td style="text-align:left">${groups}</td><td>${fx(x.chi2, 2)}</td><td>${x.df ?? '—'}</td><td>${pb(x.p, !useF && x.p < 0.05)}</td><td>${pb(x.p_fisher, useF && x.p_fisher < 0.05)}</td></tr>`; });
   $('chisq-table').innerHTML = h + '</tbody></table>';
   const A = R.attrition;
-  let a = `<table><thead><tr><th>變項（單位）</th><th>完成全部量測（n = ${A.n_completed}）</th><th>未完成（n = ${A.n_dropped}）</th><th>Welch t p 值</th></tr></thead><tbody>`;
+  let a = `<table><thead><tr><th>變項（單位）</th><th>三次皆參加（n = ${A.n_completed}）</th><th>未完成（n = ${A.n_dropped}）</th><th>Welch t p 值</th></tr></thead><tbody>`;
   A.vars.forEach(v => a += `<tr><td class="name">${esc(v.name)}<small>${esc(v.unit)}</small></td><td>${fx(v.m1, 1)} ± ${fx(v.s1, 1)}</td><td>${fx(v.m0, 1)} ± ${fx(v.s0, 1)}</td><td>${pb(v.p)}</td></tr>`);
   const sx = A.sex, pS = sx.use_fisher ? sx.p_fisher : sx.p, o = sx.observed;
-  a += `<tr><td class="name">男性比例</td><td>${o[0][0]}/${o[0][0] + o[1][0]}（${(100 * o[0][0] / (o[0][0] + o[1][0])).toFixed(1)}%）</td><td>${o[0][1]}/${o[0][1] + o[1][1]}（${(100 * o[0][1] / (o[0][1] + o[1][1] || 1)).toFixed(1)}%）</td><td>${pb(pS)}（${sx.use_fisher ? 'Fisher' : '卡方'}）</td></tr>`;
+  a += `<tr><td class="name">男性比例</td><td>${(100 * o[0][0] / (o[0][0] + o[1][0])).toFixed(1)}%</td><td>${(100 * o[0][1] / (o[0][1] + o[1][1] || 1)).toFixed(1)}%</td><td>${pb(pS)}（${sx.use_fisher ? 'Fisher' : '卡方'}）</td></tr>`;
   $('att-table').innerHTML = a + '</tbody></table>';
-  $('att-foot').textContent = (pS < 0.05 || A.vars.some(v => v.p < 0.05)) ? '兩組在部分特性上有顯著差異，完成全部量測者可能無法完全代表全體受測者，解讀變化結果時請留意。' : '兩組 T1 特性無顯著差異，完成全部量測者對 T1 受測者具一定代表性。';
-  // 補充分析
-  const all = R.strata.all, prs = all.rm[MAIN[0].code].pairs;
-  let m = `<table><thead><tr><th>指標（單位）</th><th>人數／筆數</th>${W.map(w => `<th>${w} 估計值<br>(95% CI)</th>`).join('')}<th>F（自由度）</th><th>整體 p 值</th>${prs.map(p => `<th>${pairLabel(p)}<br>p 值</th>`).join('')}<th>與主分析</th></tr></thead><tbody>`;
-  MAIN.forEach(f => { const s = all.mixed[f.code], d = dd(f); if (!s) return;
-    const same = (s.p < 0.05) === (all.rm[f.code].p_final < 0.05);
-    m += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td><td>${s.n}／${s.n_obs}</td>` + s.emm.map(e => `<td>${fx(e.mean, d)}<span class="ci">${fx(e.ci_lo, d)} ~ ${fx(e.ci_hi, d)}</span></td>`).join('')
-      + `<td>${fx(s.F, 2)}（${s.df1}, ${fx(s.df2, 1)}）</td><td>${pb(s.p)}</td>` + s.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('')
-      + `<td>${same ? '<span class="chip ns">結論一致</span>' : '<span class="chip mid">結論不同</span>'}</td></tr>`; });
-  $('mixed-table').innerHTML = m + '</tbody></table>';
-  let v = `<table><thead><tr><th>指標（單位）</th>${prs.map(p => `<th>${pairLabel(p)}<br>n／變化量（95% CI）／p</th>`).join('')}</tr></thead><tbody>`;
-  MAIN.forEach(f => { const d = dd(f);
-    v += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + all.avail[f.code].map(p => p.diff == null ? `<td class="p-alt">n = ${p.n}，人數不足</td>`
-      : `<td>n=${p.n}　${sgn(p.diff, d)}<span class="ci">${fx(p.ci_lo, d)} ~ ${fx(p.ci_hi, d)}</span>　${pb(p.p_bonf)}</td>`).join('') + '</tr>'; });
-  $('avail-table').innerHTML = v + '</tbody></table><div class="foot">變化量為後一次減前一次；信賴區間與 p 值皆為 Bonferroni 校正（比較 ' + prs.length + ' 次）。</div>';
+  $('att-foot').textContent = (pS < 0.05 || A.vars.some(v => v.p < 0.05)) ? '兩組在部分特性上有顯著差異，三次皆參加者可能無法完全代表全體參加者，解讀成效時請留意。' : '兩組前測特性無顯著差異，三次皆參加者對前測參加者具一定代表性。';
 }
+
+/* ---------- 9 方法 ---------- */
 {
   const M = [
-    ['研究設計', `單組重複量測設計。${I.waves.map(w => `${w.label} ${w.date}`).join('、')}；儀器為 TANITA ${I.model} 多頻生物電阻抗分析儀。各次量測依固定量測日分組。`],
-    ['分析對象', `受測者 ${I.n_people} 人；完成全部 ${K} 次量測者 ${I.n_complete} 人。同一人同一次量測重複者保留最後一筆。`],
-    ['主分析', '完成全部量測者以單因子重複測量變異數分析（SPSS GLM Repeated Measures）比較各次平均值；Mauchly 球形檢定 p < 0.05 時採 Greenhouse-Geisser 校正。效果量為偏 η²。事後比較採 Bonferroni 校正。並以 Friedman 檢定（無母數）作為參考。'],
-    ['補充分析', '為納入缺測者，另以線性混合模型（SPSS MIXED；時間為固定效果、個人為隨機截距、REML 估計、Satterthwaite 自由度）分析全部可用資料，並對每兩次量測以兩次皆有量測者進行配對 t 檢定（Bonferroni 校正）。此作法假設缺測與已觀察到的資料有關（MAR），不進行插補。'],
-    ['類別變項', '風險分類的變化以 Cochran\'s Q 檢定（完成全部量測者），兩兩比較採 McNemar 精確檢定並以 Bonferroni 校正。各次量測的組間比例差異採 Pearson 卡方檢定；期望次數小於 5 的格子超過 20% 時改採 Fisher 精確檢定。'],
-    ['分層分析', '依性別、年齡層分別進行重複測量 ANOVA；不同分組的變化趨勢差異以線性混合模型之「時間 × 分組」交互作用檢定。'],
+    ['計畫設計', `${I.program_weeks} 週健康促進介入計畫，單組重複量測設計。${I.waves.map(w => `${w.label} ${w.date}（第 ${w.week} 週）`).join('、')}；儀器為 TANITA ${I.model} 多頻生物電阻抗分析儀。各次量測依固定量測日判定。`],
+    ['分析對象', `參加者 ${I.n_people} 人；三次皆參加者 ${I.n_complete} 人為主要分析對象。只參加兩次者，納入「與前測的配對比較」。同一人同一次重複量測者保留最後一筆。`],
+    ['主要指標', 'BMI、體重、體脂率、總體肌肉量、內臟脂肪等級。'],
+    ['三次比較', '三次皆參加者以重複測量變異數分析（SPSS GLM Repeated Measures）比較；Mauchly 球形檢定 p < 0.05 時採 Greenhouse-Geisser 校正。效果量為偏 η²。事後兩兩比較採 Bonferroni 校正。Friedman 檢定為無母數參考。'],
+    ['配對比較', '前測→後測、前測→追蹤測，各以兩次皆有量測者進行配對 t 檢定（SPSS T-TEST PAIRS），並以 Wilcoxon 符號等級檢定為無母數參考。'],
+    ['分類變項', '風險分類比例：三次皆參加者以 Cochran\'s Q 檢定、兩兩 McNemar 精確檢定（Bonferroni 校正）；與前測的配對比較以 McNemar 精確檢定。各次量測的組間比例以 Pearson 卡方檢定，期望次數小於 5 的格子超過 20% 時改採 Fisher 精確檢定。'],
+    ['分層分析', `性別；年齡層（首次量測年齡）分為 30 歲（含）以下、31–40 歲、41–50 歲、51–60 歲、61 歲以上。各分層分別進行重複測量 ANOVA；分組間變化趨勢差異以混合設計 ANOVA 的「時間 × 分組」交互作用檢定。人數少於 ${MIN} 人的分層不呈現結果。`],
     ['顯著水準', 'α = 0.05（雙尾）。* p < 0.05、** p < 0.01、*** p < 0.001。'],
-    ['研究限制', '(1) 無對照組，無法排除季節、量測時段、飲食與水分狀態等因素的影響；(2) 生物電阻抗法易受水分、進食與運動影響，小幅變化可能落在量測誤差範圍內；(3) 部分受測者未完成全部量測，主分析人數較少；(4) 同時檢定多項指標，偽陽性機率增加，單一指標的顯著結果宜保守解讀；(5) 未量測腰圍。'],
+    ['研究限制', '(1) 無對照組，無法排除季節、量測時段、飲食與水分狀態等因素的影響；(2) 生物電阻抗法易受水分、進食與運動影響，小幅變化可能落在量測誤差範圍內；(3) 部分參加者未完成全部量測，主分析人數較少；(4) 同時檢定多項指標，偽陽性機率增加，單一指標的顯著結果宜保守解讀；(5) 未量測腰圍。'],
   ];
   $('method').innerHTML = '<dl>' + M.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('') + '</dl>';
-  let g = '<table class="left"><thead><tr><th>中文名稱</th><th>單位</th><th>原始欄位</th><th>說明</th></tr></thead><tbody>';
-  MAIN.forEach(f => g += `<tr><td class="name">${esc(f.name)}</td><td>${esc(f.unit)}</td><td class="p-alt">${f.code}</td><td style="white-space:normal">${esc(f.note || '')}</td></tr>`);
-  g += `<tr><td class="name">分節指標</td><td>%、kg、Ω</td><td class="p-alt">RL/LL/RA/LA/TR</td><td style="white-space:normal">右腳、左腳、右手、左手、軀幹的體脂肪率、脂肪量、除脂肪量、肌肉量與阻抗</td></tr>`;
+  let g = '<table class="left"><thead><tr><th>指標</th><th>單位</th><th>說明</th></tr></thead><tbody>';
+  MAIN.forEach(f => g += `<tr><td class="name">${esc(f.name)}</td><td>${esc(f.unit)}</td><td style="white-space:normal">${esc(f.note || '')}</td></tr>`);
+  g += '<tr><td class="name">BMI 分級</td><td>—</td><td style="white-space:normal">國民健康署：過輕 &lt; 18.5、正常 18.5–23.9、過重 24–26.9、肥胖 ≥ 27</td></tr>';
+  g += '<tr><td class="name">體脂率超標</td><td>—</td><td style="white-space:normal">國民健康署：男性 ≥ 25%、女性 ≥ 30%</td></tr>';
   $('glossary').innerHTML = g + '</tbody></table>';
-  $('footer').textContent = `本報告由分析程式自動產生 ・ 資料來源：TANITA ${I.model} GMON 匯出檔 ・ 僅呈現彙總統計，不含個人資料`;
+  $('footer').textContent = `${I.title} ・ ${I.workplace} ・ 資料來源：TANITA ${I.model} ・ 僅呈現彙總統計，不含個人資料`;
 }
-
-/* ---------- 指標選單、圖例 ---------- */
-$('ind-sel').innerHTML = MAIN.map(f => `<option value="${f.code}" ${f.code === state.ind ? 'selected' : ''}>${esc(f.name)}（${esc(f.unit)}）</option>`).join('');
-$('ind-sel').onchange = e => { state.ind = e.target.value; render(); };
 $('lg-bmi').innerHTML = legendHTML(['過輕 <18.5', '正常 18.5–23.9', '過重 24–26.9', '肥胖 ≥27'], CAT_COLORS.bmi);
 $('lg-vfat').innerHTML = legendHTML(['標準 1–9', '偏高 10–14', '過高 ≥15'], CAT_COLORS.vfat);
-$('strata-title').textContent = `各分層 T1 → ${W[K - 1]} 的平均變化量`;
-$('strata-note').textContent = `完成全部量測者；Bonferroni 校正 95% 信賴區間。實心點表示該分層三次整體檢定 p < 0.05。不受篩選影響；人數不足 ${MIN} 人的分層不呈現。`;
 
-/* ---------- 依篩選更新 ---------- */
-const FILTERED = ['kpi-body', 'mini', 'rm-table', 'single-line', 'cat-bmi', 'cat-vfat', 'bin-table', 'seg-table'];
+/* ---------- 依篩選更新：3–6 節 ---------- */
+const FILTERED = ['kpi-body', 'trend', 'rm-table', 'avail-table', 'cat-bmi', 'cat-vfat', 'bin-table'];
 function render(){
   const k = skey(), st = R.strata[k];
-  $('f-n').innerHTML = `目前對象：<b>${esc(st.label)}</b>　受測 <b>${st.n ?? '&lt;' + MIN}</b> 人・完成全部 <b>${st.n_complete != null && st.n_complete >= MIN ? st.n_complete : '&lt;' + MIN}</b> 人`;
-  $('print-scope').textContent = `第 3–6、10 節呈現對象：${st.label}（受測 ${st.n} 人，完成全部量測 ${st.n_complete} 人）`;
+  const nc = st.n_complete != null && st.n_complete >= MIN ? st.n_complete : '&lt;' + MIN;
+  $('f-n').innerHTML = `目前對象：<b>${esc(st.label)}</b>　參加 <b>${st.n ?? '&lt;' + MIN}</b> 人・三次皆參加 <b>${nc}</b> 人`;
+  $('print-scope').textContent = `第 3–6 節呈現對象：${st.label}（參加 ${st.n} 人，三次皆參加 ${st.n_complete} 人）`;
   if (st.suppressed) {
-    const msg = `<div class="suppress">此分層受測人數少於 ${MIN} 人，為保護個人隱私不呈現統計結果。請放寬篩選條件。</div>`;
-    FILTERED.forEach(id => $(id).innerHTML = ['kpi-body', 'rm-table'].includes(id) ? msg : ''); $('single-foot').textContent = ''; $('rm-foot').textContent = ''; return;
+    const msg = `<div class="suppress">此分層參加人數少於 ${MIN} 人，為保護個人隱私不呈現統計結果。請放寬篩選條件。</div>`;
+    FILTERED.forEach(id => $(id).innerHTML = ['kpi-body', 'rm-table', 'avail-table'].includes(id) ? msg : ''); return;
   }
-  // 分級分布（各波可用資料）
+  // 5-2 與前測配對（可用資料）
+  const prs = st.avail[MAIN[0].code];
+  let v = `<table><thead><tr><th>指標（單位）</th>${prs.map(p => `<th>${pairLabel(p)}<br><span style="font-weight:400">n</span></th><th>${W[0]}</th><th>${W[p.b - 1]}</th><th>變化量（95% CI）</th><th>配對 t<br>p 值</th><th>Wilcoxon<br>p 值</th>`).join('')}</tr></thead><tbody>`;
+  MAIN.forEach(f => { const d = dd(f);
+    v += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + st.avail[f.code].map(p => p.diff == null ? `<td>&lt;${MIN}</td><td colspan="5" class="p-alt">人數不足</td>`
+      : `<td>${p.n}</td><td>${fx(p.mean_a, d)}</td><td>${fx(p.mean_b, d)}</td><td>${sgn(p.diff, d)}<span class="ci">${fx(p.ci_lo, d)} ~ ${fx(p.ci_hi, d)}</span></td><td>${pb(p.p)}</td><td>${pb(p.p_w, false)}</td>`).join('') + '</tr>'; });
+  $('avail-table').innerHTML = v + '</tbody></table>';
+  // 6 分級
   stacked($('cat-bmi'), R.fields.bmi_cats, st.bmi_cat, CAT_COLORS.bmi, 'BMI 分級分布');
   stacked($('cat-vfat'), R.fields.vfat_cats, st.vfat_cat, CAT_COLORS.vfat, '內臟脂肪等級分布');
-  const b0 = BIN.map(x => st.binary[x.code]), pairs = b0[0].pairs || [];
-  let b = `<table><thead><tr><th>風險分類</th>${W.map(w => `<th>${w}<br><span style="font-weight:400">全部受測者</span></th>`).join('')}${b0[0].pairs ? `<th>完成者人數<br><span style="font-weight:400">${W.join('→')}</span></th><th>Cochran's Q<br>p 值</th>${pairs.map(p => `<th>${pairLabel(p)}<br>McNemar p</th>`).join('')}` : ''}</tr></thead><tbody>`;
-  BIN.forEach(x => { const v = st.binary[x.code];
-    b += `<tr><td class="name" style="white-space:normal;min-width:150px">${esc(x.name)}</td>` + v.waves.map(w => `<td>${(100 * w.yes / (w.n || 1)).toFixed(1)}%<span class="ci">${w.yes}/${w.n}</span></td>`).join('')
-      + (v.pairs ? `<td>${v.yes_complete.join(' → ')}<span class="ci">共 ${v.n_complete} 人</span></td><td>${pb(v.p)}</td>` + v.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('') : '') + '</tr>'; });
-  $('bin-table').innerHTML = b + '</tbody></table>' + (b0[0].pairs ? '' : `<div class="foot">完成全部量測者少於 ${MIN} 人，未進行變化檢定。</div>`);
+  const b0 = st.binary[BIN[0].code], cpairs = b0.pairs || [];
+  let b = `<table><thead><tr><th>風險分類</th>${W.map(w => `<th>${w}<br><span style="font-weight:400">全部參加者</span></th>`).join('')}`
+    + (b0.pairs ? `<th>三次皆參加<br><span style="font-weight:400">人數 ${W.join('→')}</span></th><th>Cochran's Q<br>p 值</th>` : '')
+    + b0.avail.map(p => `<th>${pairLabel(p)}<br>配對 McNemar p</th>`).join('') + '</tr></thead><tbody>';
+  BIN.forEach(x => { const it = st.binary[x.code];
+    b += `<tr><td class="name" style="white-space:normal;min-width:150px">${esc(x.name)}</td>` + it.waves.map(w => `<td>${(100 * w.yes / (w.n || 1)).toFixed(1)}%<span class="ci">${w.yes}/${w.n}</span></td>`).join('')
+      + (it.pairs ? `<td>${it.yes_complete.join(' → ')}<span class="ci">共 ${it.n_complete} 人</span></td><td>${pb(it.p)}${it.p < 0.05 ? `<span class="ci">${it.pairs.map(p => `${pairLabel(p)} p=${pf(p.p_bonf)}`).join('；')}</span>` : ''}</td>` : '')
+      + it.avail.map(p => p.p == null ? `<td class="p-alt">人數不足</td>` : `<td>${pb(p.p)}<span class="ci">${p.yes_a} → ${p.yes_b}（n=${p.n}）</span></td>`).join('') + '</tr>'; });
+  $('bin-table').innerHTML = b + '</tbody></table><div class="foot">Cochran\'s Q 達顯著時，下方列出兩兩 McNemar 檢定（Bonferroni 校正）。配對 McNemar 為前測與該次皆有量測者，下方為前測→該次的符合人數。</div>';
   if (!st.rm) {
-    const msg = `<div class="suppress">此分層完成全部量測者少於 ${MIN} 人，不進行重複測量檢定。上方人數與分級分布仍可參考。</div>`;
-    ['kpi-body', 'rm-table'].forEach(id => $(id).innerHTML = msg); ['mini', 'single-line', 'seg-table'].forEach(id => $(id).innerHTML = '');
-    $('single-foot').textContent = ''; $('rm-foot').textContent = ''; return;
+    const msg = `<div class="suppress">此分層三次皆參加者少於 ${MIN} 人，不進行三次比較；「與前測的配對比較」與分級分布仍可參考。</div>`;
+    ['kpi-body', 'rm-table'].forEach(id => $(id).innerHTML = msg); $('trend').innerHTML = ''; $('rm-note').textContent = ''; return;
   }
-  $('kpi-sub').textContent = `完成全部 ${K} 次量測者（${st.n_complete} 人）的平均值；p 值為重複測量 ANOVA 整體檢定。`;
-  const KP = ['WEIGHT', 'BMI', 'FATP', 'PMM', 'VFATL', 'PHASEANGLE'];
-  $('kpi-body').innerHTML = '<div class="grid g3">' + KP.map(c => { const f = F[c], s = st.rm[c], d = dd(f);
+  // 3 主要成果
+  $('kpi-sub').textContent = `三次皆參加者（${st.n_complete} 人）的平均值；p 值為重複測量 ANOVA 整體檢定。`;
+  $('kpi-body').innerHTML = '<div class="grid g3">' + MAIN.map(f => { const s = st.rm[f.code], d = dd(f), ch = s.means[K - 1] - s.means[0];
     return `<div class="card kpi"><div style="font-size:13px;color:var(--ink2)">${esc(f.name)}（${esc(f.unit)}）</div>
       <div class="row">${s.means.map((m, j) => j < K - 1 ? `<span class="from">${fx(m, d)} →</span>` : `<span class="to">${fx(m, d)}</span>`).join('')}</div>
-      <div class="delta">T1→${W[K - 1]} 變化 ${sgn(s.means[K - 1] - s.means[0], d)}・p = ${pf(s.p_final)}${stars(s.p_final)}</div>
-      <div style="margin-top:6px">${verdictChip(f, s)}</div></div>`; }).join('') + '</div>';
-  $('mini').innerHTML = MAIN.map(f => `<div class="mini ${st.rm[f.code].p_final < 0.05 ? 'sig' : ''}"><div class="mt"><span>${esc(f.name)}</span><small>${esc(f.unit)}・p=${pf(st.rm[f.code].p_final)}${stars(st.rm[f.code].p_final)}</small></div><div class="chart" id="mini-${f.code}"></div></div>`).join('');
-  MAIN.forEach(f => { const s = st.rm[f.code];
-    const pts = [{m: 0, lo: 0, hi: 0, n: s.n}, ...s.pairs.filter(p => p.a === 1).map(p => ({m: p.diff, lo: p.ci_lo, hi: p.ci_hi, n: p.n}))];
-    lineChart($('mini-' + f.code), {...f, name: f.name + '（相對 T1 的變化）'}, [{name: '相對 T1 變化', color: C.teal, pts}], {w: 240, h: 130, l: 40, r: 12, t: 8, b: 22, fs: 10.5, r0: 4, ticks: 3, zero: true}); });
-  $('rm-table').innerHTML = rmTable(MAIN, st.rm);
-  $('rm-foot').textContent = `GG：已採 Greenhouse-Geisser 校正。「有利／不利」依健康意義判定（如體脂肪率下降、肌肉量上升為有利），以 T1 與 ${W[K - 1]} 平均值比較方向；未標示者無一致的好壞方向。Friedman 為無母數參考檢定。`;
-  const f = F[state.ind], s = st.rm[state.ind], series = [rmSeries(s, `完成全部量測（n=${s.n}）`, C.teal)];
-  if (k === 'all' && st.mixed && st.mixed[f.code]) { const m = st.mixed[f.code]; series.push({name: `全部可用資料（混合模型，n=${m.n}）`, color: C.orange, dash: true, pts: m.emm.map((e, j) => ({m: e.mean, lo: e.ci_lo, hi: e.ci_hi, n: st.n_wave[j]}))}); }
-  $('single-legend').innerHTML = series.map(x => `<span><i class="dot" style="background:${x.color}"></i>${esc(x.name)}</span>`).join('');
-  lineChart($('single-line'), f, series, {labels: true});
-  $('single-foot').textContent = `重複測量 ANOVA p = ${pf(s.p_final)}${s.use_gg ? '（GG 校正）' : ''}；Friedman p = ${pf(s.friedman_p)}。` + s.pairs.map(p => `${pairLabel(p)} ${sgn(p.diff, dd(f))}（p = ${pf(p.p_bonf)}）`).join('、') + '。';
-  strataDots($('single-strata'), f);
-  $('seg-table').innerHTML = st.rm[SEG[0].code] ? rmTable(SEG, st.rm) : '<div class="suppress">分節指標僅提供全體、性別與年齡層的結果。</div>';
+      <div class="delta">${W[0]}→${W[K - 1]} ${sgn(ch, d)}（${sgn(ch / s.means[0] * 100, 1)}%）・p = ${pf(s.p_final)}${stars(s.p_final)}</div>
+      <div style="margin-top:6px">${verdictChip(f, ch, s.p_final)}</div></div>`; }).join('') + '</div>';
+  // 4 趨勢圖
+  $('trend-sub').textContent = `三次皆參加者（${st.n_complete} 人）各次平均值，直線為 95% 信賴區間。上方括號標示 Bonferroni 事後比較達顯著的配對。`;
+  $('trend').innerHTML = MAIN.map(f => { const s = st.rm[f.code];
+    return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${esc(f.name)}<span style="font-weight:400;color:var(--muted);font-size:13px">（${esc(f.unit)}）</span></b><span style="font-size:12.5px;color:var(--ink2)">整體 p = ${pf(s.p_final)}${stars(s.p_final)}${s.use_gg ? '（GG）' : ''}</span></div>
+      <div class="chart" id="tr-${f.code}"></div><div class="foot" style="margin-top:2px">${s.pairs.map(p => `${pairLabel(p)} ${sgn(p.diff, dd(f))}（p = ${pf(p.p_bonf)}）`).join('；')}</div></div>`; }).join('');
+  MAIN.forEach(f => { const s = st.rm[f.code]; lineChart($('tr-' + f.code), f, [rmSeries(s, '三次皆參加者', C.teal)], {labels: true, t: 30, brackets: s.pairs.map(p => ({a: p.a, b: p.b, p: p.p_bonf}))}); });
+  // 5-1 RM 表
+  $('rm-note').textContent = `n = ${st.n_complete}。平均值 ± 標準差；違反球形假設（Mauchly p < 0.05）時採 Greenhouse-Geisser 校正（GG）；兩兩比較採 Bonferroni 校正。`;
+  let h = `<table><thead><tr><th>指標（單位）</th>${W.map(w => `<th>${w}</th>`).join('')}<th>F 值</th><th>整體<br>p 值</th><th>偏 η²</th><th>Friedman<br>p 值</th>${st.rm[MAIN[0].code].pairs.map(p => `<th>${pairLabel(p)}<br>p 值</th>`).join('')}<th>判定</th></tr></thead><tbody>`;
+  MAIN.forEach(f => { const s = st.rm[f.code], d = dd(f), df = s.use_gg ? `${fx(s.df1_gg, 2)}, ${fx(s.df2_gg, 2)}` : `${s.df1}, ${s.df2}`;
+    h += `<tr class="${s.p_final < 0.05 ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + s.means.map((m, j) => `<td>${fx(m, d)}<span class="ci">± ${fx(s.sds[j], d)}</span></td>`).join('')
+      + `<td>${fx(s.F, 2)}<span class="ci">df ${df}${s.use_gg ? '・GG' : ''}</span></td><td>${pb(s.p_final)}</td><td>${fx(s.pes, 3)}</td><td>${pb(s.friedman_p, false)}</td>`
+      + s.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('') + `<td>${verdictChip(f, s.means[K - 1] - s.means[0], s.p_final)}</td></tr>`; });
+  $('rm-table').innerHTML = h + '</tbody></table>';
 }
 render();
-if (PRINT) $('seg-details').open = true;
-window.addEventListener('beforeprint', () => $('seg-details').open = true);
 })();
 </script>
 </body>
