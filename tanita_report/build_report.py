@@ -58,7 +58,7 @@ def main():
     src = args[0]
     outdir = Path(args[1]) if len(args) > 1 else HERE / "output"
     outdir.mkdir(parents=True, exist_ok=True)
-    D, res = analyze.run(src, name, by_sex="--no-sex" not in flags)
+    D, res = analyze.run(src, name, by_sex="--no-sex" not in flags, by_group="--pooled" in flags)
     embed = json.loads(json.dumps(res, default=lambda x: x.item() if hasattr(x, "item") else str(x)))
     for st in embed["strata"].values():
         if st["suppressed"]:

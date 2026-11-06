@@ -339,7 +339,7 @@ document.querySelectorAll('.minn').forEach(e => e.textContent = MIN);
 document.title = `${I.workplace}｜${I.title}`;
 $('title').textContent = I.title;
 $('eyebrow').textContent = `${I.workplace} ・ TANITA 身體組成分析`;
-$('meta').innerHTML = `<span>單位　<b>${esc(I.workplace)}</b></span>` + I.waves.map(w => `<span>${w.label}　<b>${w.date}</b>（第 ${w.week} 週）</span>`).join('') + `<span>納入分析　<b>${I.n_people} 人</b>（共 ${I.n_total} 人參加）</span>`;
+$('meta').innerHTML = `<span>單位　<b>${esc(I.workplace)}</b></span>` + (I.pooled ? [`<span>合併　<b>${I.n_groups} 個職場</b>（各職場分別判定量測次別）</span>`] : I.waves.map(w => `<span>${w.label}　<b>${w.date}</b>（第 ${w.week} 週）</span>`)).join('') + `<span>納入分析　<b>${I.n_people} 人</b>（共 ${I.n_total} 人參加）</span>`;
 
 /* ---------- 1 總體評價 ---------- */
 const E = R.evaluation, lvlName = {high: '需介入', mid: '需關注', low: '良好'}, ico = l => l === 'high' ? '▲' : l === 'mid' ? '●' : '✓';
@@ -350,7 +350,7 @@ $('recs').innerHTML = E.recommendations.map(r => `<div class="rec"><h3>${esc(r.t
 $('sources').innerHTML = E.sources.map(s => `<li>${esc(s)}</li>`).join('');
 
 /* ---------- 2 計畫概況 ---------- */
-$('ov-sub').textContent = `${I.program_weeks} 週計畫，共 ${I.n_total} 人參加；納入分析 ${I.n_people} 人（三次皆參加 ${I.n_complete} 人、參加兩次 ${I.n_two} 人）。` + I.intervals.map((d, i) => `${W[i]}至${W[i + 1]}間隔 ${d} 天`).join('、') + '。以下人數與統計皆以納入分析者計算。';
+$('ov-sub').textContent = `${I.program_weeks} 週計畫，共 ${I.n_total} 人參加；納入分析 ${I.n_people} 人（三次皆參加 ${I.n_complete} 人、參加兩次 ${I.n_two} 人）。` + I.intervals.map((d, i) => `${W[i]}至${W[i + 1]}${I.pooled ? '平均' : ''}間隔 ${d} 天`).join('、') + '。以下人數與統計皆以納入分析者計算。';
 const tile = (lab, val, unit, note) => `<div class="card tile"><div class="lab">${lab}</div><div class="val">${val}<small>${unit}</small></div><div class="note">${note || ''}</div></div>`;
 $('ov-tiles').innerHTML = I.waves.map(w => tile(`${w.label}（第 ${w.week} 週）`, w.n, '人', w.date === w.date_end ? w.date : `${w.date}～${w.date_end}`)).join('')
   + tile('三次皆參加', I.n_complete, '人', `另參加兩次 ${I.n_two} 人`);
@@ -561,7 +561,7 @@ chisqBlock('年齡層', 'cq-age', BY_SEX ? '9-2　年齡層' : '9-1　年齡層'
 /* ---------- 9 方法 ---------- */
 {
   const M = [
-    ['計畫設計', `${I.program_weeks} 週健康促進介入計畫，單組重複量測設計。${I.waves.map(w => `${w.label} ${w.date}（第 ${w.week} 週）`).join('、')}；儀器為 TANITA ${I.model} 多頻生物電阻抗分析儀。各次量測依固定量測日判定。`],
+    ['計畫設計', `${I.program_weeks} 週健康促進介入計畫，單組重複量測設計。${I.pooled ? `本報告為 ${I.n_groups} 個職場合併之整體分析，各職場依其量測日分別判定${I.waves.map(w => w.label).join('、')}後合併（${Object.entries(I.groups).map(([g, ds]) => `${g}：${ds.join('、')}`).join('；')}），各次週數為各職場平均` : I.waves.map(w => `${w.label} ${w.date}（第 ${w.week} 週）`).join('、')}；儀器為 TANITA ${I.model} 多頻生物電阻抗分析儀。各次量測依固定量測日判定。`],
     ['分析對象', `參加者 ${I.n_total} 人，納入分析 ${I.n_people} 人：三次皆參加者 ${I.n_complete} 人為主要分析對象；參加兩次（前測＋後測或追蹤測其一）者 ${I.n_two} 人合併分析。未參加前測或只量測一次者 ${I.n_excluded} 人不納入。同一人同一次重複量測者保留最後一筆。`],
     ['主要指標', 'BMI、體重、體脂率、總體肌肉量、內臟脂肪等級。BMI 與體重的變化只標示上升或下降，不判定有利或不利（可能來自增肌或肌肉流失）；有利與否以體脂率、總體肌肉量、內臟脂肪等級及身體組成類型判斷。'],
     ['三次比較', '三次皆參加者以重複測量變異數分析（SPSS GLM Repeated Measures）比較；Mauchly 球形檢定 p < 0.05 時採 Greenhouse-Geisser 校正。效果量為偏 η²。事後兩兩比較採 Bonferroni 校正。Friedman 檢定為無母數參考。'],

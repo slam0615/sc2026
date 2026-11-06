@@ -142,7 +142,7 @@ def wave_names(K):
 
 
 # ---------------------------------------------------------------- 資料
-def load_data(path, name=None):
+def load_data(path, name=None, by_group=False):
     raw = pd.read_excel(path)
     raw = raw.rename(columns={c: ZH_COLUMNS.get(str(c).strip(), c) for c in raw.columns})
     missing = [c for c in REQUIRED if c not in raw.columns]
@@ -154,23 +154,54 @@ def load_data(path, name=None):
     for code, meta in MAIN.items():
         d[code] = d[code].astype(float).round(meta[2])
     log = []
-    dates = sorted(d["DATE"].unique())
-    wave_of, waves = {dates[0]: 1}, [[dates[0]]]
-    for prev, cur in zip(dates, dates[1:]):
-        if (pd.Timestamp(cur) - pd.Timestamp(prev)).days > WAVE_GAP_DAYS:
-            waves.append([])
-        waves[-1].append(cur)
-        wave_of[cur] = len(waves)
-    d["WAVE"] = d["DATE"].map(wave_of)
-    K = len(waves)
+    def cluster(dates):
+        dates = sorted(dates)
+        wave_of, waves = {dates[0]: 1}, [[dates[0]]]
+        for prev, cur in zip(dates, dates[1:]):
+            if (pd.Timestamp(cur) - pd.Timestamp(prev)).days > WAVE_GAP_DAYS:
+                waves.append([])
+            waves[-1].append(cur)
+            wave_of[cur] = len(waves)
+        return wave_of, waves
+
+    if by_group:
+        # 整體分析（多職場合併檔）：各職場（GROUP1）分別依測量日分群，再依次別合併
+        if "GROUP1" not in d or d["GROUP1"].isna().any():
+            raise SystemExit("整體分析需要每筆資料都有 GROUP1（職場）欄位")
+        if (d.groupby("CUSTOMERID")["GROUP1"].nunique() > 1).any():
+            raise SystemExit("有編號同時出現在不同職場，請檢查 CUSTOMERID")
+        gw = {}
+        for gname, sub in d.groupby("GROUP1"):
+            wo, ws = cluster(sub["DATE"].unique())
+            gw[gname] = ws
+            d.loc[sub.index, "WAVE"] = sub["DATE"].map(wo)
+        d["WAVE"] = d["WAVE"].astype(int)
+        Ks = {g: len(ws) for g, ws in gw.items()}
+        K = max(Ks.values())
+        names = wave_names(K)
+        bad = [f"{g}（{k} 次）" for g, k in Ks.items() if k != 3]
+        if bad:
+            log.append(f"警告：{'、'.join(bad)}量測次數不是 3 次，請確認量測日期")
+        for g, ws in gw.items():
+            log.append(f"{g}：" + "、".join(f"{names[i]} {pd.Timestamp(w[0]).date()}" + (f"～{pd.Timestamp(w[-1]).date()}" if len(w) > 1 else "")
+                                            for i, w in enumerate(ws)))
+        waves = [sorted(x for ws in gw.values() if len(ws) > i for x in ws[i]) for i in range(K)]
+        days = [round(float(np.mean([(pd.Timestamp(ws[i][0]) - pd.Timestamp(ws[0][0])).days for ws in gw.values() if len(ws) > i]))) for i in range(K)]
+        info_extra = dict(pooled=True, n_groups=len(gw), groups={g: [str(pd.Timestamp(w[0]).date()) for w in ws] for g, ws in gw.items()})
+    else:
+        wave_of, waves = cluster(d["DATE"].unique())
+        d["WAVE"] = d["DATE"].map(wave_of)
+        K = len(waves)
+        names = wave_names(K)
+        if K != 3:
+            log.append(f"警告：資料共有 {K} 次量測（預期為前測、後測、追蹤測 3 次），請確認量測日期")
+        for i, ws in enumerate(waves):
+            if len(ws) > 1:
+                log.append(f"{names[i]}包含 {len(ws)} 個測量日（{pd.Timestamp(ws[0]).date()}～{pd.Timestamp(ws[-1]).date()}），合併為同一次")
+        days = [int((pd.Timestamp(ws[0]) - pd.Timestamp(waves[0][0])).days) for ws in waves]
+        info_extra = dict(pooled=False)
     if K < 2:
         raise SystemExit("只有一次量測，無法比較變化")
-    names = wave_names(K)
-    if K != 3:
-        log.append(f"警告：資料共有 {K} 次量測（預期為前測、後測、追蹤測 3 次），請確認量測日期")
-    for i, ws in enumerate(waves):
-        if len(ws) > 1:
-            log.append(f"{names[i]}包含 {len(ws)} 個測量日（{pd.Timestamp(ws[0]).date()}～{pd.Timestamp(ws[-1]).date()}），合併為同一次")
     dup = d.duplicated(["CUSTOMERID", "WAVE"], keep=False)
     if dup.any():
         log.append(f"{d[dup].groupby(['CUSTOMERID', 'WAVE']).ngroups} 人次於同一次量測重複測量，保留最後一筆")
@@ -214,14 +245,13 @@ def load_data(path, name=None):
     people["RISK0"] = people.index.map(base_ow).astype(int)   # 前測體位：1＝BMI ≥ 24
     by_wave = {w: d[d.WAVE == w].set_index("CUSTOMERID") for w in range(1, K + 1)}
     workplace = name or (str(raw["GROUP1"].dropna().iloc[0]) if "GROUP1" in raw and raw["GROUP1"].notna().any() else Path(path).stem)
-    t0 = pd.Timestamp(waves[0][0])
     info = dict(
         title=PROGRAM_TITLE, program_weeks=PROGRAM_WEEKS, workplace=workplace,
         model=str(raw["MODEL"].dropna().iloc[0]) if "MODEL" in raw else "MC-780", k=K,
         waves=[dict(code=f"T{i + 1}", label=names[i], date=str(pd.Timestamp(ws[0]).date()), date_end=str(pd.Timestamp(ws[-1]).date()),
-                    day=int((pd.Timestamp(ws[0]) - t0).days), week=int(round((pd.Timestamp(ws[0]) - t0).days / 7)),
+                    day=int(days[i]), week=int(round(days[i] / 7)),
                     n=int(len(by_wave[i + 1]))) for i, ws in enumerate(waves)],
-        intervals=[int((pd.Timestamp(waves[i][0]) - pd.Timestamp(waves[i - 1][0])).days) for i in range(1, K)],
+        intervals=[int(days[i] - days[i - 1]) for i in range(1, K)], **info_extra,
         n_records=int(len(raw)), n_total=int(raw["CUSTOMERID"].nunique()), n_people=int(len(people)),
         n_excluded=int(len(excluded)), n_complete=int(people.COMPLETE.sum()), n_two=int(people.TWO.sum()),
         n_two_by_wave={names[w - 1]: int((people.POSTWAVE == w).sum()) for w in range(2, K + 1)},
@@ -615,9 +645,9 @@ def lmm_sensitivity(D):
     return out
 
 
-def run(path, name=None, by_sex=True):
+def run(path, name=None, by_sex=True, by_group=False):
     """by_sex=False：不做性別分層、時間 × 性別交互作用與性別卡方（使用者指定的職場，例如性別幾乎單一）。"""
-    D = load_data(path, name)
+    D = load_data(path, name, by_group=by_group)
     K, people, long, info = D["K"], D["people"], D["long"], D["info"]
     info["by_sex"] = by_sex
     out = dict(info=info, min_n=MIN_N, strata={}, interaction={}, chisq=[], attrition={})
