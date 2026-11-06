@@ -152,7 +152,7 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
   #risk-card,#age-card{break-before:page}
   .howto{padding:6px 10px;font-size:9.5pt}
   .sumgrid td{padding:4px 4px}
-  #trend .card,#s-strata .card .mini{break-inside:avoid}
+  #trend .card,#s-strata .card .mini,#ov-trend .mini,#ov-pct-card{break-inside:avoid}
   .mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
   .mini{padding:6px 8px!important}
   .mini .mt{font-size:10pt!important}
@@ -200,6 +200,11 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
     <h2><span class="num">1</span>總體評價與建議</h2>
     <p class="sub">依據衛生福利部國民健康署現行公告之健康體位標準與健康生活建議，以全體參加者的彙總資料評估，不呈現任何個人資料。</p>
     <div class="verdict" id="verdict"></div>
+    <h3 style="font-size:17px;margin:22px 0 4px">整體健康指標變化趨勢</h3>
+    <p class="sub" id="ov-trend-sub" style="margin-top:0"></p>
+    <div class="card" id="ov-pct-card"><div style="font-weight:500">各指標相對前測的變化（%）</div><div class="legend" id="ov-pct-legend" style="margin-top:6px"></div><div class="chart" id="ov-pct"></div><div class="foot" id="ov-pct-foot"></div></div>
+    <div class="legend" id="ov-trend-legend" style="margin-top:14px"></div>
+    <div class="mini-grid" id="ov-trend"></div>
     <div class="grid g2" id="findings"></div>
     <h3 style="font-size:17px;margin:22px 0 10px">建議事項</h3>
     <div class="grid g2" id="recs"></div>
@@ -409,11 +414,11 @@ function lineChart(el, f, series, opt = {}){
   W.forEach((w, j) => g += `<text x="${X(j)}" y="${H - 9}" text-anchor="${j === 0 ? 'start' : j === K - 1 ? 'end' : 'middle'}" style="font-size:${fs}px">${w}</text>`);
   series.forEach((s, si) => {
     const off = series.length > 1 ? (si - (series.length - 1) / 2) * (opt.spread || 7) : 0;
-    g += `<polyline points="${s.pts.map((p, j) => `${X(j) + off},${Y(p.m)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    g += `<polyline points="${s.pts.map((p, j) => `${X(j) + off},${Y(p.m)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"${s.dash ? ' stroke-dasharray="5 4"' : ''}/>`;
     s.pts.forEach((p, j) => { const x = X(j) + off;
       g += `<line x1="${x}" x2="${x}" y1="${Y(p.lo)}" y2="${Y(p.hi)}" stroke="${s.color}" stroke-width="1.6" opacity=".7"/>`;
       g += `<circle cx="${x}" cy="${Y(p.m)}" r="${opt.r0 || 5}" fill="${s.color}" stroke="#fff" stroke-width="2"/>`;
-      if (opt.labels) g += `<text x="${x + (j === K - 1 ? -10 : 10)}" y="${Y(p.m) - 8}" text-anchor="${j === K - 1 ? 'end' : 'start'}" class="t-ink" style="font-size:${Math.max(fs, 13)}px;font-weight:700">${fx(p.m, dd(f))}</text>`;
+      if (s.labels ?? opt.labels) g += `<text x="${x + (j === K - 1 ? -10 : 10)}" y="${Y(p.m) - 8}" text-anchor="${j === K - 1 ? 'end' : 'start'}" class="t-ink" style="font-size:${Math.max(fs, 13)}px;font-weight:700">${fx(p.m, dd(f))}</text>`;
       g += `<rect x="${x - 16}" y="${T}" width="32" height="${H - T - B}" fill="transparent" data-tip="${esc(`<b>${esc(s.name)}・${W[j]}</b>　${esc(f.name)}<br>平均 ${fx(p.m, dd(f))} ${esc(f.unit)}<br>95% CI ${fx(p.lo, dd(f))} ~ ${fx(p.hi, dd(f))}<br>n = ${p.n}`)}"/>`; });
     if (opt.endLabels) g += `<text x="${X(K - 1) + off + 8}" y="${Y(s.pts[K - 1].m) + 4}" class="t-ink" style="font-size:${fs}px">${esc(s.short || s.name)}</text>`;
   });
@@ -687,6 +692,47 @@ function render(){
       + s.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('') + `<td>${dCell(s.pairs.find(p => p.a === 1 && p.b === K).dz)}</td><td>${verdictChip(f, s.means[K - 1] - s.means[0], s.p_final)}</td></tr>`; });
   $('rm-table').innerHTML = h + '</tbody></table>';
 }
+
+/* ---------- 1 整體健康指標變化趨勢（全體，不分性別、年齡層；不受篩選影響） ---------- */
+function overallTrend(){
+  const A = R.strata.all, PAL = [C.teal, '#FF7F50', '#E8559B', '#C99A00', '#4E79A7'];
+  const hasRM = !!A.rm, nWave = W.map((w, j) => (A.desc[MAIN[0].code][j] || {}).n);
+  $('ov-trend-sub').textContent = (hasRM ? `合併全體參加者呈現，不分性別、年齡層（不受下方篩選影響）。實線為三次皆參加者（${A.n_complete} 人）的平均值，直線為 95% 信賴區間；` : `三次皆參加者少於 ${MIN} 人，只呈現各次量測平均。`)
+    + `虛線為各次所有納入分析者的平均（${W.map((w, j) => `${w} ${nWave[j]} 人`).join('、')}），每次的人不完全相同，僅供參考。`;
+  // (a) 相對前測變化（%）
+  if (hasRM) {
+    const ser = MAIN.map((f, i) => { const m = A.rm[f.code].means; return {f, color: PAL[i], v: m.map(x => (x / m[0] - 1) * 100), m}; });
+    const Wd = 760, H = 300, L = 52, Rr = 150, T = 18, B = 32, fs = 13.5;
+    let lo = Math.min(0, ...ser.flatMap(s => s.v)), hi = Math.max(0, ...ser.flatMap(s => s.v));
+    const pad = (hi - lo) * 0.12 || 0.5; lo -= pad; hi += pad;
+    const ticks = niceTicks(lo, hi, 5); lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+    const X = j => L + (Wd - L - Rr) * (j / (K - 1)), Y = v => T + (hi - v) / (hi - lo) * (H - T - B), td = Math.max(1, tickDec(ticks));
+    let g = svgOpen(Wd, H, '各指標相對前測的變化百分比');
+    ticks.forEach(t => g += `<line x1="${L}" x2="${Wd - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="${Math.abs(t) < 1e-9 ? C.axis : C.grid}" stroke-width="${Math.abs(t) < 1e-9 ? 1.5 : 1}"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end" class="t-mut" style="font-size:${fs}px">${t > 0 ? '+' : ''}${fx(t, td)}%</text>`);
+    W.forEach((w, j) => g += `<text x="${X(j)}" y="${H - 9}" text-anchor="${j === 0 ? 'start' : 'middle'}" style="font-size:${fs}px">${w}</text>`);
+    // 終點標籤避免重疊
+    const ends = ser.map((s, i) => ({i, y: Y(s.v[K - 1])})).sort((a, b) => a.y - b.y);
+    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 16) ends[k].y = ends[k - 1].y + 16;
+    ser.forEach((s, i) => { const d = dd(s.f);
+      g += `<polyline points="${s.v.map((v, j) => `${X(j)},${Y(v)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round"/>`;
+      s.v.forEach((v, j) => g += `<circle cx="${X(j)}" cy="${Y(v)}" r="5" fill="${s.color}" stroke="#fff" stroke-width="2" data-tip="${esc(`<b>${esc(s.f.name)}・${W[j]}</b><br>平均 ${fx(s.m[j], d)} ${esc(s.f.unit)}<br>相對${W[0]} ${sgn(v, 2)}%`)}"/>`);
+      const ey = ends.find(e => e.i === i).y;
+      g += `<text x="${X(K - 1) + 10}" y="${ey + 4}" class="t-ink" style="font-size:${fs}px"><tspan style="fill:${s.color};font-weight:700">${sgn(s.v[K - 1], 1)}%</tspan> ${esc(s.f.name)}</text>`; });
+    $('ov-pct').innerHTML = g + '</svg>'; bindTip($('ov-pct').firstChild);
+    $('ov-pct-legend').innerHTML = ser.map(s => `<span><i class="dot" style="background:${s.color}"></i>${esc(s.f.name)}</span>`).join('');
+    $('ov-pct-foot').textContent = `三次皆參加者（${A.n_complete} 人）；變化% =（該次平均 ÷ ${W[0]}平均 − 1）× 100。各指標單位不同，此圖只比較變化方向與幅度；BMI、體重只看上升或下降，不判定有利或不利。統計檢定見第 5 節。`;
+  } else $('ov-pct-card').remove();
+  // (b) 各指標平均值
+  $('ov-trend-legend').innerHTML = (hasRM ? `<span><i class="dot" style="background:${C.teal}"></i>三次皆參加者（${A.n_complete} 人）</span>` : '') + `<span><i style="background:#9aa7aa;height:3px;vertical-align:3px"></i>各次所有納入分析者（虛線）</span>`;
+  $('ov-trend').innerHTML = MAIN.map(f => `<div class="mini"><div class="mt"><span>${esc(f.name)}</span><small>${esc(f.unit)}${hasRM ? `・整體 p=${pf(A.rm[f.code].p_final)}${stars(A.rm[f.code].p_final)}` : ''}</small></div><div class="chart" id="ovt-${f.code}"></div></div>`).join('');
+  MAIN.forEach(f => {
+    const ser = [], ds = A.desc[f.code];
+    if (ds.every(x => x.mean != null)) ser.push({name: '各次所有納入分析者', color: '#9aa7aa', dash: true, labels: false, pts: ds.map(x => ({m: x.mean, lo: x.ci_lo, hi: x.ci_hi, n: x.n}))});
+    if (hasRM) ser.push({...rmSeries(A.rm[f.code], '三次皆參加者', C.teal), labels: true});
+    if (ser.length) lineChart($('ovt-' + f.code), f, ser, {w: 380, h: 220, l: 46, r: 20, t: 18, b: 28, fs: 13.5, r0: 5, ticks: 4, spread: 6, labels: false});
+  });
+}
+overallTrend();
 render();
 })();
 </script>

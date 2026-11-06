@@ -97,7 +97,7 @@ def build(D, res, out_path):
         ("卡方摘要", "各次量測組間比較的判定結果一覽（連結到「卡方檢定」工作表）"),
         ("卡方檢定", "各次量測：風險分類 × " + ("性別／" if BYS else "") + "年齡層；年齡層另有線性趨勢檢定；Fisher 精確檢定為 Python 值"),
         ("流失分析", "三次皆參加 vs 參加兩次者的前測值比較"),
-        ("趨勢圖", "Excel 原生圖表（可直接編輯）：三次皆參加者平均、分層趨勢、分級分布"),
+        ("趨勢圖", "Excel 原生圖表（可直接編輯）：整體健康指標變化趨勢（相對前測 %）、三次皆參加者與各次所有納入分析者平均、分層趨勢、分級分布"),
         ("敏感度分析", "線性混合模型（Python 值，以 SPSS 語法第 11 段 MIXED 驗證）"),
         ("", None), ("顏色說明", ""),
         ("藍色字", "原始資料（直接輸入的數值）"), ("黑色字", "Excel 公式計算結果"),
@@ -604,6 +604,8 @@ def build(D, res, out_path):
 
     # ------------------------------------------------------------ 趨勢圖（Excel 原生圖表，可直接編輯）
     from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.chart.axis import ChartLines
+    from openpyxl.chart.series import SeriesLabel
     ws = wb.create_sheet("趨勢圖")
     title(ws, "趨勢圖（Excel 原生圖表，可直接編輯樣式、標題與座標軸）",
           "左側資料表為圖表來源：平均值以公式自寬格式資料計算；分級人數為各次納入分析者（藍字數值）。人數少於 %d 人的年齡層不列入。" % A.MIN_N)
@@ -637,9 +639,48 @@ def build(D, res, out_path):
         ws.cell(r + 1 + w, 1, W[w]).font = F_BOLD
         for j, c in enumerate(codes):
             ws.cell(r + 1 + w, 2 + j, f"=AVERAGEIF({COMP},1,{rng(col[c][w])})").number_format = "0.00"
-    for j, c in enumerate(codes):
-        charts.append(line_chart(f"{A.MAIN[c][0]}：三次皆參加者平均", A.MAIN[c][1], r, r + 1, r + K, 2 + j, 2 + j, PAL[j:] + PAL))
+    r_rm = r
     r += K + 3
+    # (1b) 各次所有納入分析者平均（每次的人不完全相同，僅供參考）
+    ws.cell(r, 1, "各次所有納入分析者平均（%s）" % "、".join(f"{W[w]} n = {info['waves'][w]['n']}" for w in range(K))).font = F_BOLD
+    r += 1
+    head(ws, r, ["量測"] + [f"{A.MAIN[c][0]}（{A.MAIN[c][1]}）" for c in codes])
+    for w in range(K):
+        ws.cell(r + 1 + w, 1, W[w]).font = F_BOLD
+        for j, c in enumerate(codes):
+            ws.cell(r + 1 + w, 2 + j, f"=AVERAGE({rng(col[c][w])})").number_format = "0.00"
+    r_all = r
+    r += K + 3
+    # (1c) 整體：相對前測變化（%），三次皆參加者
+    ws.cell(r, 1, "整體：各指標相對%s的變化（%%），三次皆參加者" % W[0]).font = F_BOLD
+    r += 1
+    head(ws, r, ["量測"] + [A.MAIN[c][0] for c in codes])
+    for w in range(K):
+        ws.cell(r + 1 + w, 1, W[w]).font = F_BOLD
+        for j, c in enumerate(codes):
+            cl = L(2 + j)
+            ws.cell(r + 1 + w, 2 + j, f"=({cl}{r_rm + 1 + w}/{cl}${r_rm + 1}-1)*100").number_format = "0.00"
+    ch = line_chart(f"整體健康指標變化趨勢：相對{W[0]}（%）", "變化（%）", r, r + 1, r + K, 2, 1 + len(codes), PAL)
+    ch.y_axis.number_format = '0.0"%"'
+    ch.y_axis.majorGridlines = ChartLines()
+    charts.append(ch)
+    r += K + 3
+    # 各指標：三次皆參加者（實線）＋各次所有納入分析者（虛線）
+    for j, c in enumerate(codes):
+        ch = line_chart(f"{A.MAIN[c][0]}：整體平均", A.MAIN[c][1], r_rm, r_rm + 1, r_rm + K, 2 + j, 2 + j, PAL[j:] + PAL)
+        ch.series[0].tx = SeriesLabel(v="三次皆參加者")
+        ch2 = LineChart()
+        ch2.add_data(Reference(ws, min_col=2 + j, max_col=2 + j, min_row=r_all + 1, max_row=r_all + K), titles_from_data=False)
+        se = ch2.series[0]
+        se.tx = SeriesLabel(v="各次所有納入分析者")
+        se.marker.symbol, se.marker.size, se.smooth = "circle", 5, False
+        se.graphicalProperties.line.solidFill = "9AA7AA"
+        se.graphicalProperties.line.dashStyle = "dash"
+        se.graphicalProperties.line.width = 22000
+        se.marker.graphicalProperties.solidFill = "9AA7AA"
+        se.marker.graphicalProperties.line.solidFill = "9AA7AA"
+        ch.series.append(se)
+        charts.append(ch)
     # (2) 年齡層分層（三次皆參加者）
     ok_age = [g for g in A.AGE_GROUPS if "rm" in res["strata"].get(f"age:{g}", {})]
     if BYS:
