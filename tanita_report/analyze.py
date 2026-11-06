@@ -163,6 +163,19 @@ def load_data(path, name=None):
     people["COMPLETE"] = present.all(axis=1).astype(int)
     for w in range(1, K + 1):
         people[f"HAS{w}"] = present[w].astype(int)
+    # 分析對象：三次皆參加（complete）；前測＋後測或追蹤測其一（two）；其餘不納入分析
+    nwaves = present.sum(axis=1)
+    people["GROUP"] = np.where(people.COMPLETE == 1, "complete",
+                               np.where((people.HAS1 == 1) & (nwaves == 2), "two", "excluded"))
+    people["TWO"] = (people.GROUP == "two").astype(int)
+    people["POSTWAVE"] = [int(max(w for w in range(2, K + 1) if present.loc[i, w])) if people.loc[i, "GROUP"] == "two" else 0
+                          for i in people.index]
+    all_patterns = people.PATTERN.value_counts()
+    excluded = people[people.GROUP == "excluded"]
+    if len(excluded):
+        log.append(f"未參加前測或只量測一次者 {len(excluded)} 人（{'、'.join(f'{p} {n} 人' for p, n in excluded.PATTERN.value_counts().items())}）不納入分析")
+    people = people[people.GROUP != "excluded"]
+    d = d[d.CUSTOMERID.isin(people.index)]
     by_wave = {w: d[d.WAVE == w].set_index("CUSTOMERID") for w in range(1, K + 1)}
     workplace = name or (str(raw["GROUP1"].dropna().iloc[0]) if "GROUP1" in raw and raw["GROUP1"].notna().any() else Path(path).stem)
     t0 = pd.Timestamp(waves[0][0])
@@ -173,8 +186,12 @@ def load_data(path, name=None):
                     day=int((pd.Timestamp(ws[0]) - t0).days), week=int(round((pd.Timestamp(ws[0]) - t0).days / 7)),
                     n=int(len(by_wave[i + 1]))) for i, ws in enumerate(waves)],
         intervals=[int((pd.Timestamp(waves[i][0]) - pd.Timestamp(waves[i - 1][0])).days) for i in range(1, K)],
-        n_records=int(len(raw)), n_people=int(raw["CUSTOMERID"].nunique()), n_complete=int(people.COMPLETE.sum()),
-        patterns=[dict(pattern=p, n=int(n), waves=p.count("→") + 1) for p, n in people.PATTERN.value_counts().items()],
+        n_records=int(len(raw)), n_total=int(raw["CUSTOMERID"].nunique()), n_people=int(len(people)),
+        n_excluded=int(len(excluded)), n_complete=int(people.COMPLETE.sum()), n_two=int(people.TWO.sum()),
+        n_two_by_wave={names[w - 1]: int((people.POSTWAVE == w).sum()) for w in range(2, K + 1)},
+        patterns=[dict(pattern=p, n=int(n), waves=p.count("→") + 1,
+                       group=("complete" if p.count("→") + 1 == K else "two" if p.startswith(names[0]) and p.count("→") == 1 else "excluded"))
+                  for p, n in all_patterns.items()],
         cleaning_log=log, age_groups=AGE_GROUPS, age_n={gname: int((people.AGEGRP == gname).sum()) for gname in AGE_GROUPS},
     )
     order = {nm: i for i, nm in enumerate(names)}
@@ -413,8 +430,10 @@ def stratum_analysis(D, sex, grp):
     if grp:
         ids = ids[people.loc[ids, "AGEGRP"] == grp]
     comp = ids[people.loc[ids, "COMPLETE"] == 1]
+    two = ids[people.loc[ids, "TWO"] == 1]
+    post_wave = people.loc[two, "POSTWAVE"]
     lg = long[long.CUSTOMERID.isin(ids)]
-    st = dict(n=int(len(ids)), n_complete=int(len(comp)), n_wave=[int((lg.WAVE == w).sum()) for w in range(1, K + 1)])
+    st = dict(n=int(len(ids)), n_complete=int(len(comp)), n_two=int(len(two)), n_wave=[int((lg.WAVE == w).sum()) for w in range(1, K + 1)])
     st["suppressed"] = st["n"] < MIN_N
     if st["suppressed"]:
         return st
@@ -423,14 +442,9 @@ def stratum_analysis(D, sex, grp):
     wide = {c: lg.pivot(index="CUSTOMERID", columns="WAVE", values=c).reindex(columns=range(1, K + 1)) for c in MAIN}
     if len(comp) >= MIN_N:
         st["rm"] = {c: rm_anova(wide[c].loc[comp].values) for c in MAIN}
-    # 兩次參加者也納入：前測 → 其後各次（兩次皆有量測者）
-    st["avail"] = {}
-    for c in MAIN:
-        prs = []
-        for w in range(2, K + 1):
-            sub = wide[c][[1, w]].dropna()
-            prs.append(dict(a=1, b=w, **(paired(sub[1], sub[w]) if len(sub) >= MIN_N else dict(n=int(len(sub))))))
-        st["avail"][c] = prs
+    # 參加兩次者（前測＋後測或追蹤測其一）合併：前測 vs 介入後量測
+    post = lambda tab: np.array([tab.loc[i, post_wave[i]] for i in two], float)
+    st["two"] = {c: (paired(wide[c].loc[two, 1].values, post(wide[c])) if len(two) >= MIN_N else dict(n=int(len(two)))) for c in MAIN}
     cat = {}
     nb = K * (K - 1) // 2
     for bc in BINARY:
@@ -445,16 +459,12 @@ def stratum_analysis(D, sex, grp):
                 pm = mcnemar_exact(b_, c_)
                 prs.append(dict(a=i + 1, b=j + 1, improved=b_, worsened=c_, p=pm, p_bonf=min(1.0, pm * nb)))
             item.update(n_complete=len(comp), yes_complete=B.sum(0).tolist(), Q=Q, df=df, p=p, pairs=prs)
-        av = []
-        for w in range(2, K + 1):
-            sub = B_all[[1, w]].dropna().astype(int)
-            if len(sub) >= MIN_N:
-                b_, c_ = int(((sub[1] == 1) & (sub[w] == 0)).sum()), int(((sub[1] == 0) & (sub[w] == 1)).sum())
-                av.append(dict(a=1, b=w, n=int(len(sub)), yes_a=int(sub[1].sum()), yes_b=int(sub[w].sum()),
-                               improved=b_, worsened=c_, p=mcnemar_exact(b_, c_)))
-            else:
-                av.append(dict(a=1, b=w, n=int(len(sub))))
-        item["avail"] = av
+        if len(two) >= MIN_N:
+            x0, x1 = B_all.loc[two, 1].values.astype(int), post(B_all).astype(int)
+            b_, c_ = int(((x0 == 1) & (x1 == 0)).sum()), int(((x0 == 0) & (x1 == 1)).sum())
+            item["two"] = dict(n=int(len(two)), yes_pre=int(x0.sum()), yes_post=int(x1.sum()), improved=b_, worsened=c_, p=mcnemar_exact(b_, c_))
+        else:
+            item["two"] = dict(n=int(len(two)))
         cat[bc] = item
     st["binary"] = cat
     st["bmi_cat"] = [[int(((lg.WAVE == w) & (lg.BMICAT == c)).sum()) for c in BMI_CATS] for w in range(1, K + 1)]
@@ -488,7 +498,7 @@ def run(path, name=None):
                 res = chisq_table(tab, labels, ["是", "否"])
                 res.update(wave=w, outcome=bc, outcome_name=bname, by="性別" if var == "SEX" else "年齡層")
                 out["chisq"].append(res)
-    # 代表性：前測受測者中，三次皆參加 vs 未完成（比較前測值）
+    # 代表性：分析對象中，三次皆參加 vs 參加兩次（比較前測值）
     t1 = D["by_wave"][1]
     flag = people.loc[t1.index, "COMPLETE"] == 1
     att = []
@@ -500,7 +510,7 @@ def run(path, name=None):
                         s0=y.std() if len(y) > 1 else None, t=t.statistic if t else None, df=t.df if t else None, p=t.pvalue if t else None))
     tab = [[int(((t1.SEX == s) & flag).sum()), int(((t1.SEX == s) & ~flag).sum())] for s in ["M", "F"]]
     out["attrition"] = dict(n_completed=int(flag.sum()), n_dropped=int((~flag).sum()), vars=att,
-                            sex=chisq_table(tab, ["男性", "女性"], ["三次皆參加", "未完成"]))
+                            sex=chisq_table(tab, ["男性", "女性"], ["三次皆參加", "參加兩次"]))
 
     def status(ww):
         return dict(n=len(ww), bmi_cat=[int((ww.BMICAT == c).sum()) for c in BMI_CATS], vfat_cat=[int((ww.VFCAT == c).sum()) for c in VFAT_CATS],
@@ -570,19 +580,20 @@ def build_evaluation(o):
                + ("隨時間有顯著變化的指標為" + "；".join(sig) + "。" if sig else f"{'、'.join(v[0] for v in MAIN.values())}在{'、'.join(names)}之間均未達統計顯著變化。"))
     else:
         txt = f"三次皆參加者僅 {info['n_complete']} 人，人數不足，未進行三次比較。"
-    av = []
-    for w in range(2, K + 1):
+    nn = info["n_two"]
+    if nn >= MIN_N:
         hits = []
         for c, (nm, unit, dec, good, _) in MAIN.items():
-            pr = allst["avail"][c][w - 2]
+            pr = allst["two"][c]
             if pr.get("p") is not None and pr["p"] < ALPHA:
                 tag = "" if good == 0 else ("有利" if np.sign(pr["diff"]) == good else "不利")
                 fav_any |= tag == "有利"
                 unfav_any |= tag == "不利"
                 hits.append(f"{nm}{'上升' if pr['diff'] > 0 else '下降'} {abs(pr['diff']):.{max(dec, 1)}f} {unit}（{tag + '，' if tag else ''}{pfmt(pr['p'])}）")
-        nn = allst["avail"]["WEIGHT"][w - 2]["n"]
-        av.append(f"前測→{names[w - 1]}（{nn} 人）" + ("：" + "、".join(hits) if hits else "無顯著變化"))
-    txt += "納入參加兩次者的配對比較：" + "；".join(av) + "。"
+        txt += (f"參加兩次者 {nn} 人（前測＋{'或'.join(names[1:])}）的前測與介入後比較："
+                + ("、".join(hits) if hits else "各指標均無顯著變化") + "。")
+    elif nn:
+        txt += f"參加兩次者僅 {nn} 人，人數不足，未單獨檢定。"
     strat = []
     for key, st in o["strata"].items():
         if key == "all" or "|" in key or "rm" not in st:
@@ -611,7 +622,7 @@ def build_evaluation(o):
         dict(title="均衡飲食", text="依國健署「我的餐盤」六口訣：每天早晚一杯奶、每餐水果拳頭大、菜比水果多一點、飯跟蔬菜一樣多、豆魚蛋肉一掌心、堅果種子一茶匙；減少含糖飲料與高油加工食品。"),
         dict(title="規律身體活動", text="成人每週累積至少 150 分鐘中等費力身體活動（或 75 分鐘費力身體活動），並每週至少 2 天進行肌力訓練，有助於降低體脂並維持肌肉量。"),
         dict(title="職場支持措施", text="建議職場延續計畫成果：推動減少久坐（每坐 1 小時起身活動）、提供健康餐飲選項及團體運動課程，並將腰圍納入量測，以完整評估腹部肥胖。"),
-        dict(title="提升參與完整度", text=f"本次三次皆參加者占 {100 * info['n_complete'] / info['n_people']:.0f}%。建議固定量測時段（空腹、未運動、排尿後），並提醒參加者每次皆出席，以提高成效評估的可信度。"),
+        dict(title="提升參與完整度", text=f"本次三次皆參加者占全部參加者 {100 * info['n_complete'] / info['n_total']:.0f}%。建議固定量測時段（空腹、未運動、排尿後），並提醒參加者每次皆出席，以提高成效評估的可信度。"),
     ]
     return dict(overall=overall, rule=rule, findings=findings, recommendations=recs,
                 sources=["衛生福利部國民健康署「成人健康體位標準」（BMI、腰圍、體脂肪率）",

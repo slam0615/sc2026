@@ -33,6 +33,8 @@ def main():
             st.pop("n_wave", None)
         if (st.get("n_complete") or 0) < analyze.MIN_N:
             st["n_complete"] = None
+        if (st.get("n_two") or 0) < analyze.MIN_N:
+            st["n_two"] = None
     data = json.dumps(embed, ensure_ascii=False, default=lambda x: x.item() if hasattr(x, "item") else str(x))
     data = data.replace("</", "<\\/")
     name = res["info"]["workplace"] or "報告"

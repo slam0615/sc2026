@@ -81,14 +81,14 @@ def build(D, res, out_path):
     rows = [
         (f"{info['title']} — Excel 驗算檔", None),
         (f"單位：{info['workplace']}　" + "　".join(f"{w['label']} {w['date']}（第 {w['week']} 週，{w['n']} 人）" for w in info["waves"])
-         + f"　參加 {info['n_people']} 人、三次皆參加 {info['n_complete']} 人", None),
+         + f"　共 {info['n_total']} 人參加，納入分析 {info['n_people']} 人（三次 {info['n_complete']}、兩次 {info['n_two']}）", None),
         ("", None), ("工作表", "內容"),
         ("欄位對照", "TANITA MC-780 欄位代碼、中文名稱、單位"),
         ("寬格式資料", "每人一列（序號取代編號）；空白＝該次未量測。風險分類旗標與交互作用用的對比分數為公式"),
         ("各次描述統計", "每次量測全部參加者的 n、平均、標準差、95% 信賴區間"),
         ("重複測量ANOVA", "三次皆參加者：平方和拆解、F、p、Mauchly 球形檢定、Greenhouse-Geisser 校正、偏 η²"),
         ("兩兩比較", "三次皆參加者的配對 t 檢定與 Bonferroni 校正（＝ SPSS GLM 的 Bonferroni 事後比較）"),
-        ("與前測配對", "前測→後測、前測→追蹤測：兩次皆有量測者（含只參加兩次者）的配對 t 檢定"),
+        ("參加兩次者", "只參加兩次（前測＋後測或追蹤測其一）者合併：前測 vs 介入後的配對 t 檢定"),
         ("交互作用", "時間 × 性別、時間 × 年齡層（混合設計 ANOVA，三次皆參加者）"),
         ("分層ANOVA", "性別、年齡層各分層的重複測量 ANOVA（Python 值，以 SPSS 語法第 5 段驗證）"),
         ("CochranQ_McNemar", "風險分類變化：Cochran's Q、McNemar 精確檢定"),
@@ -131,8 +131,8 @@ def build(D, res, out_path):
     # ------------------------------------------------------------ 寬格式資料
     ws = wb.create_sheet("寬格式資料")
     ids = people.sort_values(["COMPLETE", "SEX", "AGE0"], ascending=[False, True, True]).index
-    h1 = ["序號", "性別", "首次年齡", "年齡層", "三次皆參加(1=是)"] + [f"有{w}" for w in W]
-    h2 = ["ID", "SEX", "AGE0", "AGEGRP", "COMPLETE"] + [f"HAS{w}" for w in range(1, K + 1)]
+    h1 = ["序號", "性別", "首次年齡", "年齡層", "三次皆參加(1=是)"] + [f"有{w}" for w in W] + ["參加兩次(1=是)", "介入後次別"]
+    h2 = ["ID", "SEX", "AGE0", "AGEGRP", "COMPLETE"] + [f"HAS{w}" for w in range(1, K + 1)] + ["TWO", "POSTWAVE"]
     col, fcol, zcol = {}, {}, {}
     c = len(h1) + 1
     for code in codes:
@@ -145,6 +145,17 @@ def build(D, res, out_path):
         h1 += [f"{A.BINARY[bc][0]}\n{w}" for w in W]
         h2 += [f"{bc}_T{w}" for w in range(1, K + 1)]
         c += K
+    pcol, pfcol = {}, {}
+    for code in codes:
+        pcol[code] = c
+        h1.append(f"{A.MAIN[code][0]}\n介入後（兩次者）")
+        h2.append(f"{code}_POST")
+        c += 1
+    for bc in A.BINARY:
+        pfcol[bc] = c
+        h1.append(f"{A.BINARY[bc][0]}\n介入後（兩次者）")
+        h2.append(f"{bc}_POST")
+        c += 1
     if K == 3:
         for code in codes:
             zcol[code] = [c, c + 1]
@@ -159,8 +170,15 @@ def build(D, res, out_path):
     for i, pid in enumerate(ids):
         rr = R0 + i
         p = people.loc[pid]
-        for j, v in enumerate([i + 1, p.SEX, int(p.AGE0), p.AGEGRP, int(p.COMPLETE)] + [int(p[f"HAS{w}"]) for w in range(1, K + 1)], 1):
+        for j, v in enumerate([i + 1, p.SEX, int(p.AGE0), p.AGEGRP, int(p.COMPLETE)] + [int(p[f"HAS{w}"]) for w in range(1, K + 1)]
+                              + [int(p.TWO), W[int(p.POSTWAVE) - 1] if p.TWO else ""], 1):
             ws.cell(rr, j, v).font = F_INPUT
+        if p.TWO:
+            pw = int(p.POSTWAVE) - 1
+            for code in codes:
+                ws.cell(rr, pcol[code], f"={L(col[code][pw])}{rr}").font = F_BASE
+            for bc in A.BINARY:
+                ws.cell(rr, pfcol[bc], f"={L(fcol[bc][pw])}{rr}").font = F_BASE
         for w in range(1, K + 1):
             bw = D["by_wave"][w]
             if pid not in bw.index:
@@ -184,6 +202,7 @@ def build(D, res, out_path):
     rng = lambda cc: f"{S}!${L(cc)}${R0}:${L(cc)}${R1}"
     COMP, SEXR, AGER = rng(5), rng(2), rng(4)
     HAS = [rng(6 + w) for w in range(K)]
+    TWO = rng(6 + K)
 
     # ------------------------------------------------------------ 各次描述統計
     ws = wb.create_sheet("各次描述統計")
@@ -256,16 +275,16 @@ def build(D, res, out_path):
     nbf = K * (K - 1) // 2
     PH = ["指標", "比較", "n", "平均差", "差值 SD", "SE", "t", "df", "p（未校正）", "p（校正）", "CI 下限", "CI 上限", "Python p", "差異"]
 
-    def pair_sheet(name, ttl, sub, pairs, cond, pyget, bonf):
+    def pair_sheet(name, ttl, sub, pairs, cond, pyget, bonf):  # pairs(code) -> [(標籤, 欄A, 欄B)]
         ws = wb.create_sheet(name)
         title(ws, ttl, sub)
         head(ws, 4, PH, [16, 14, 6, 10, 10, 10, 9, 6, 11, 11, 11, 11, 12, 9])
         r = 5
         for code in codes:
-            for k, (a, b) in enumerate(pairs):
-                Ya, Yb = rng(col[code][a]), rng(col[code][b])
-                cd = cond(a, b)
-                cells = [A.MAIN[code][0], f"{W[a]}→{W[b]}", f"=SUMPRODUCT({cd})",
+            for k, (lab, ca, cb) in enumerate(pairs(code)):
+                Ya, Yb = rng(ca), rng(cb)
+                cd = cond
+                cells = [A.MAIN[code][0], lab, f"=SUMPRODUCT({cd})",
                          f"=SUMPRODUCT({cd}*({Yb}-{Ya}))/C{r}",
                          f"=SQRT((SUMPRODUCT({cd}*({Yb}-{Ya})^2)-C{r}*D{r}^2)/(C{r}-1))", f"=E{r}/SQRT(C{r})",
                          f"=IFERROR(D{r}/F{r},0)", f"=C{r}-1", f"=IFERROR(TDIST(ABS(G{r}),H{r},2),1)", f"=MIN(1,I{r}*{bonf})",
@@ -278,11 +297,12 @@ def build(D, res, out_path):
 
     pair_sheet("兩兩比較", f"兩兩比較：三次皆參加者配對 t 檢定（Bonferroni × {nbf}）",
                "等同 SPSS GLM Repeated Measures 的 EMMEANS COMPARE ADJ(BONFERRONI)；CI 為 Bonferroni 校正信賴區間。",
-               list(combinations(range(K), 2)), lambda a, b: f"({COMP}=1)", lambda code, k: allst["rm"][code]["pairs"][k]["p_bonf"], nbf)
-    pair_sheet("與前測配對", "與前測的配對 t 檢定（前測與該次皆有量測者，含只參加兩次者）",
-               "n = 前測與該次皆有數值的人數；未做多重比較校正（p 校正欄＝未校正 p）。Wilcoxon 為 Python 值，見下表最右欄說明。",
-               [(0, w) for w in range(1, K)], lambda a, b: f"({HAS[a]}=1)*({HAS[b]}=1)",
-               lambda code, k: allst["avail"][code][k].get("p"), 1)
+               lambda code: [(f"{W[a]}→{W[b]}", col[code][a], col[code][b]) for a, b in combinations(range(K), 2)],
+               f"({COMP}=1)", lambda code, k: allst["rm"][code]["pairs"][k]["p_bonf"], nbf)
+    pair_sheet("參加兩次者", f"參加兩次者：{W[0]} vs 介入後（{'或'.join(W[1:])}）配對 t 檢定",
+               "對象為只參加兩次（前測＋後測或追蹤測其一）者；介入後值見寬格式資料的「介入後」欄。不做多重比較校正（p 校正欄＝未校正 p）。Wilcoxon 為 Python 值。",
+               lambda code: [(f"{W[0]}→介入後", col[code][0], pcol[code])], f"({TWO}=1)",
+               lambda code, k: allst["two"][code].get("p"), 1)
 
     # ------------------------------------------------------------ 交互作用（混合設計 ANOVA）
     if K == 3:
@@ -360,12 +380,11 @@ def build(D, res, out_path):
     ws = wb.create_sheet("CochranQ_McNemar")
     title(ws, "風險分類變化",
           "Cochran's Q（三次皆參加者）= (k−1)[kΣCj² − T²] / (kT − ΣRi²)；McNemar 精確 p = min(1, 2×BINOMDIST(min(b,c), b+c, 0.5, TRUE))。"
-          "三次皆參加者的兩兩比較採 Bonferroni × %d；與前測配對（兩次皆有量測者）不校正。" % nbf)
+          "三次皆參加者的兩兩比較採 Bonferroni × %d；參加兩次者（前測 vs 介入後）不校正。" % nbf)
     hd = ["風險分類", "n"] + [f"{w} 人數" for w in W] + ["T", "ΣRi²", "Q", "df", "p", "Python p", "差異"]
     for a, b in combinations(range(K), 2):
         hd += [f"{W[a]}→{W[b]} 改善", f"{W[a]}→{W[b]} 惡化", f"{W[a]}→{W[b]} p（Bonferroni）", "Python p", "差異"]
-    for w in range(1, K):
-        hd += [f"配對 {W[0]}→{W[w]} n", "改善", "惡化", "McNemar p", "Python p", "差異"]
+    hd += ["參加兩次者 n", "改善", "惡化", "McNemar p", "Python p", "差異"]
     head(ws, 4, hd, [28, 6] + [10] * (len(hd) - 2), height=44)
     for i, bc in enumerate(A.BINARY):
         r = 5 + i
@@ -383,13 +402,11 @@ def build(D, res, out_path):
             bb, cc = f"{L(c0)}{r}", f"{L(c0 + 1)}{r}"
             cells += [f"=SUMPRODUCT({COMP}*({Fs[a]}=1)*({Fs[b]}=0))", f"=SUMPRODUCT({COMP}*({Fs[a]}=0)*({Fs[b]}=1))",
                       mcn(bb, cc, nbf), it["pairs"][k]["p_bonf"], f"={L(c0 + 2)}{r}-{L(c0 + 3)}{r}"]
-        for w in range(1, K):
-            c0 = len(cells) + 1
-            both = f"({HAS[0]}=1)*({HAS[w]}=1)"
-            bb, cc = f"{L(c0 + 1)}{r}", f"{L(c0 + 2)}{r}"
-            av = it["avail"][w - 1]
-            cells += [f"=SUMPRODUCT({both})", f"=SUMPRODUCT({both}*({Fs[0]}=1)*({Fs[w]}=0))", f"=SUMPRODUCT({both}*({Fs[0]}=0)*({Fs[w]}=1))",
-                      mcn(bb, cc, 1), av.get("p"), f"={L(c0 + 3)}{r}-{L(c0 + 4)}{r}"]
+        c0 = len(cells) + 1
+        Fp = rng(pfcol[bc])
+        bb, cc = f"{L(c0 + 1)}{r}", f"{L(c0 + 2)}{r}"
+        cells += [f"=SUMPRODUCT(({TWO}=1)*1)", f"=SUMPRODUCT(({TWO}=1)*({Fs[0]}=1)*({Fp}=0))", f"=SUMPRODUCT(({TWO}=1)*({Fs[0]}=0)*({Fp}=1))",
+                  mcn(bb, cc, 1), it["two"].get("p"), f"={L(c0 + 3)}{r}-{L(c0 + 4)}{r}"]
         for j, v in enumerate(cells, 1):
             ws.cell(r, j, v)
     style(ws, 5, 4 + len(A.BINARY), 1, len(hd), fmt="0.0000")
@@ -445,8 +462,8 @@ def build(D, res, out_path):
 
     # ------------------------------------------------------------ 流失分析
     ws = wb.create_sheet("流失分析")
-    title(ws, "前測參加者：三次皆參加 vs 未完成（前測值）", "Welch t：p = BETADIST(df/(df+t²), df/2, 0.5)，保留小數自由度。")
-    hd = ["變項", "完成 n", "完成 平均", "完成 SD", "未完成 n", "未完成 平均", "未完成 SD", "Welch t", "df", "p", "Python p", "差異"]
+    title(ws, "三次皆參加 vs 參加兩次（前測值）", "Welch t：p = BETADIST(df/(df+t²), df/2, 0.5)，保留小數自由度。")
+    hd = ["變項", "三次 n", "三次 平均", "三次 SD", "兩次 n", "兩次 平均", "兩次 SD", "Welch t", "df", "p", "Python p", "差異"]
     head(ws, 4, hd, [16, 8, 11, 10, 9, 11, 10, 9, 9, 10, 10, 9])
     r = 5
     for v in res["attrition"]["vars"]:
@@ -489,6 +506,9 @@ def write_spss(D, res, xlsx_path, ids):
     for w in range(1, K + 1):
         wide[f"HAS{w}"] = [int(people.loc[p, f"HAS{w}"]) for p in ids]
         labels[f"HAS{w}"] = f"有{W[w - 1]}"
+    wide["TWO"] = [int(people.loc[p, "TWO"]) for p in ids]
+    wide["POSTWAVE"] = [int(people.loc[p, "POSTWAVE"]) or None for p in ids]
+    labels.update(TWO="參加兩次（前測＋後測或追蹤測）", POSTWAVE="介入後量測次別（兩次者）")
     for code, meta in A.MAIN.items():
         for w in range(1, K + 1):
             bw = D["by_wave"][w]
@@ -499,11 +519,20 @@ def write_spss(D, res, xlsx_path, ids):
             bw = D["by_wave"][w]
             wide[f"{bc}_T{w}"] = [float(bw.loc[p, bc]) if p in bw.index else None for p in ids]
             labels[f"{bc}_T{w}"] = f"{bname} {W[w - 1]}"
+    post = lambda code, p: float(D["by_wave"][int(people.loc[p, "POSTWAVE"])].loc[p, code]) if people.loc[p, "TWO"] else None
+    for code, meta in A.MAIN.items():
+        wide[f"{code}_POST"] = [post(code, p) for p in ids]
+        labels[f"{code}_POST"] = f"{meta[0]}（{meta[1]}）介入後（兩次者）"
+    for bc, (bname, _) in A.BINARY.items():
+        wide[f"{bc}_POST"] = [post(bc, p) for p in ids]
+        labels[f"{bc}_POST"] = f"{bname} 介入後（兩次者）"
     age_lab = {i + 1: (f"{g[1:]}歲(含)以下" if g.startswith("≤") else f"{g[1:]}歲以上" if g.startswith("≥") else f"{g}歲") for i, g in enumerate(ages)}
-    vlab = {"SEX": {1: "男性", 2: "女性"}, "AGEGRP": age_lab, "COMPLETE": {0: "否", 1: "是"}}
+    vlab = {"SEX": {1: "男性", 2: "女性"}, "AGEGRP": age_lab, "COMPLETE": {0: "否", 1: "是"}, "TWO": {0: "否", 1: "是"},
+            "POSTWAVE": {w: W[w - 1] for w in range(2, K + 1)}}
     for bc in A.BINARY:
         for w in range(1, K + 1):
             vlab[f"{bc}_T{w}"] = {0: "否", 1: "是"}
+        vlab[f"{bc}_POST"] = {0: "否", 1: "是"}
     stem = str(xlsx_path.with_suffix(""))
     pyreadstat.write_sav(wide, f"{stem}_寬格式.sav", column_labels=labels, variable_value_labels=vlab)
     lg = long[long.CUSTOMERID.isin(ids)]
@@ -527,7 +556,6 @@ def write_spss(D, res, xlsx_path, ids):
 def write_sps(res, wide_name, long_name, path, K, W):
     main = list(A.MAIN)
     T = lambda c: " ".join(f"{c}_T{w}" for w in range(1, K + 1))
-    pre_pairs = [(1, w) for w in range(2, K + 1)]
     all_pairs = list(combinations(range(1, K + 1), 2))
     left = lambda c, prs: " ".join(f"{c}_T{a}" for a, b in prs)
     right = lambda c, prs: " ".join(f"{c}_T{b}" for a, b in prs)
@@ -537,6 +565,7 @@ def write_sps(res, wide_name, long_name, path, K, W):
     out = [f"""* =====================================================================.
 * {res['info']['title']}（{res['info']['workplace']}）— SPSS 驗證語法.
 * 量測次別：{'、'.join(f'T{i + 1}={w}' for i, w in enumerate(W))}.
+* 資料檔只含納入分析者（三次皆參加、參加兩次），未參加前測或只量測一次者已排除.
 * 使用前請以 CD 指令切換到 .sav 所在資料夾，例如：CD 'C:\\報告\\{res['info']['workplace']}'.
 * 需要模組：GLM 重複測量需 Advanced Statistics；/METHOD=EXACT 需 Exact Tests.
 * =====================================================================.
@@ -555,12 +584,14 @@ EXAMINE VARIABLES={' '.join(T(c) for c in main)}
     out.append("\n* ---------- 3. Friedman 檢定（無母數參考）.")
     out.append("NPAR TESTS\n" + "\n".join(f"  /FRIEDMAN={T(c)}" for c in main) + "\n  /MISSING ANALYSIS.")
     out.append(f"""
-* ---------- 4. 與前測配對（前測與該次皆有量測者，含只參加兩次者）.
-T-TEST PAIRS={' '.join(left(c, pre_pairs) for c in main)}
-  WITH {' '.join(right(c, pre_pairs) for c in main)} (PAIRED)
+* ---------- 4. 參加兩次者（前測＋後測或追蹤測其一）：前測 vs 介入後.
+TEMPORARY.
+SELECT IF TWO = 1.
+T-TEST PAIRS={' '.join(f'{c}_T1' for c in main)} WITH {' '.join(f'{c}_POST' for c in main)} (PAIRED)
   /CRITERIA=CI(.9500) /MISSING=ANALYSIS.
-NPAR TESTS /WILCOXON={' '.join(left(c, pre_pairs) for c in main)}
-  WITH {' '.join(right(c, pre_pairs) for c in main)} (PAIRED) /MISSING ANALYSIS.
+TEMPORARY.
+SELECT IF TWO = 1.
+NPAR TESTS /WILCOXON={' '.join(f'{c}_T1' for c in main)} WITH {' '.join(f'{c}_POST' for c in main)} (PAIRED) /MISSING ANALYSIS.
 
 * ---------- 5. 分層：性別、年齡層各自的重複測量 ANOVA.
 SORT CASES BY SEX.
@@ -582,12 +613,14 @@ NPAR TESTS
 {chr(10).join(f"  /COCHRAN={T(f)}" for f in flags)}
   /MCNEMAR={' '.join(left(f, all_pairs) for f in flags)} WITH {' '.join(right(f, all_pairs) for f in flags)} (PAIRED)
   /MISSING ANALYSIS.
-* 7b 與前測配對（前測與該次皆有量測者）.
+* 7b 參加兩次者：前測 vs 介入後.
+TEMPORARY.
+SELECT IF TWO = 1.
 NPAR TESTS
-  /MCNEMAR={' '.join(left(f, pre_pairs) for f in flags)} WITH {' '.join(right(f, pre_pairs) for f in flags)} (PAIRED)
+  /MCNEMAR={' '.join(f'{f}_T1' for f in flags)} WITH {' '.join(f'{f}_POST' for f in flags)} (PAIRED)
   /MISSING ANALYSIS.
 
-* ---------- 8. 代表性：前測參加者中，三次皆參加 vs 未完成（前測值）.
+* ---------- 8. 代表性：三次皆參加 vs 參加兩次（前測值）.
 TEMPORARY.
 SELECT IF HAS1 = 1.
 T-TEST GROUPS=COMPLETE(1 0) /VARIABLES=AGE0 {' '.join(f'{c}_T1' for c in main)} /CRITERIA=CI(.95).
