@@ -10,8 +10,11 @@
     主分析：三次皆參加者 — 重複測量 ANOVA（GLM REPEATED；Mauchly、Greenhouse-Geisser、Bonferroni、偏 η²）＋ Friedman
     兩次參加者也納入：前測→後測、前測→追蹤測，以兩次皆有量測者做配對 t 檢定（T-TEST PAIRS）＋ Wilcoxon
     分類變項：Cochran's Q、McNemar 精確檢定；各次 Pearson 卡方／Fisher 精確檢定
-    分層：性別、年齡層（≤30、31–40、41–50、51–60、≥61 歲）各自分析；組間趨勢差異以混合設計 ANOVA
-          之「時間 × 分組」交互作用檢定（GLM REPEATED … BY 分組）
+    分層：性別、年齡層（≤40、41–50、≥51 歲）、前測體位（BMI ≥ 24 / < 24）各自分析；組間趨勢差異以混合設計 ANOVA
+          之「時間 × 分組」交互作用檢定（GLM REPEATED … BY 分組）；年齡層的比例另以線性趨勢檢定（linear-by-linear）
+    個人變化：前測→最後一次量測的改善／持平／變差人數、體重減少 ≥ 3%／≥ 5% 的比例
+    效果量：配對比較的 Cohen's dz
+    敏感度分析：線性混合模型（MIXED，隨機截距），納入所有至少量測一次者
 """
 from __future__ import annotations
 
@@ -70,10 +73,15 @@ ZH_COLUMNS = {
 }
 
 # 年齡層（以首次量測年齡；固定分組，21 家一致）
-AGE_BINS = [(0, 30, "≤30"), (31, 40, "31-40"), (41, 50, "41-50"), (51, 60, "51-60"), (61, 200, "≥61")]
+AGE_BINS = [(0, 40, "≤40"), (41, 50, "41-50"), (51, 200, "≥51")]
 AGE_GROUPS = [b[2] for b in AGE_BINS]
 SEX_LABEL = {"M": "男性", "F": "女性"}
+RISK_LABEL = {1: "前測 BMI ≥ 24", 0: "前測 BMI < 24"}
 BMI_CATS = ["過輕", "正常", "過重", "肥胖"]
+# 個人變化的「持平」範圍：rel＝相對前測的比例、abs＝原單位；變化量達門檻才算改善或變差
+CHANGE_THRESH = {"BMI": ("rel", 0.01), "WEIGHT": ("rel", 0.01), "FATP": ("abs", 1.0), "PMM": ("rel", 0.01), "VFATL": ("abs", 1.0)}
+WEIGHT_LOSS_TARGETS = [3, 5]   # 體重減少 ≥ 3%、≥ 5%
+EPS = 1e-9                      # 邊界比較的容許誤差（Excel、SPSS 用同一值）
 VFAT_CATS = ["標準 (1–9)", "偏高 (10–14)", "過高 (≥15)"]
 
 
@@ -174,8 +182,11 @@ def load_data(path, name=None):
     excluded = people[people.GROUP == "excluded"]
     if len(excluded):
         log.append(f"未參加前測或只量測一次者 {len(excluded)} 人（{'、'.join(f'{p} {n} 人' for p, n in excluded.PATTERN.value_counts().items())}）不納入分析")
+    people_all, long_all = people.copy(), d.copy()   # 敏感度分析（混合模型）用：所有至少量測一次者
     people = people[people.GROUP != "excluded"]
     d = d[d.CUSTOMERID.isin(people.index)]
+    base_ow = d[d.WAVE == 1].set_index("CUSTOMERID")["ow"]
+    people["RISK0"] = people.index.map(base_ow).astype(int)   # 前測體位：1＝BMI ≥ 24
     by_wave = {w: d[d.WAVE == w].set_index("CUSTOMERID") for w in range(1, K + 1)}
     workplace = name or (str(raw["GROUP1"].dropna().iloc[0]) if "GROUP1" in raw and raw["GROUP1"].notna().any() else Path(path).stem)
     t0 = pd.Timestamp(waves[0][0])
@@ -199,7 +210,8 @@ def load_data(path, name=None):
     small = [f"{a} 歲（{n} 人）" for a, n in info["age_n"].items() if 0 < n < MIN_N]
     if small:
         log.append(f"年齡層 {'、'.join(small)}人數少於 {MIN_N} 人，不單獨呈現統計結果（仍計入全體）")
-    return dict(raw=raw, long=d, people=people, by_wave=by_wave, info=info, K=K, names=names)
+    info["risk_n"] = {str(k): int((people.RISK0 == k).sum()) for k in (1, 0)}
+    return dict(raw=raw, long=d, people=people, by_wave=by_wave, info=info, K=K, names=names, long_all=long_all, people_all=people_all)
 
 
 # ---------------------------------------------------------------- 統計工具
@@ -251,6 +263,7 @@ def paired(a, b, bonf=1):
     tc = stats.t.ppf(1 - ALPHA / (2 * bonf), n - 1)
     p = 2 * stats.t.sf(abs(md / se), n - 1) if sd > 0 else 1.0
     out.update(mean_a=a.mean(), mean_b=b.mean(), diff=md, sd=sd, se=se, t=md / se if sd > 0 else 0.0, df=n - 1, p=p, p_bonf=min(1.0, p * bonf),
+               dz=md / sd if sd > 0 else 0.0,
                ci_lo=md - tc * se, ci_hi=md + tc * se, pct=md / a.mean() * 100 if a.mean() else None)
     try:
         out["p_w"] = float(stats.wilcoxon(a, b, zero_method="wilcox", correction=False, method="approx").pvalue)
@@ -371,7 +384,26 @@ def chisq_table(tab, row_labels, col_labels):
     res.update(chi2=chi, df=int(df), p=p, min_expected=exp.min(), n_exp_lt5=int((exp < 5).sum()), n_cells=int(exp.size),
                p_fisher=fisher_rxc(t2) if 2 in t2.shape else None)
     res["use_fisher"] = res["n_exp_lt5"] / res["n_cells"] > 0.2
+    res["p_decide"] = res["p_fisher"] if res["use_fisher"] and res["p_fisher"] is not None else res["p"]
+    res["method"] = "Fisher" if res["use_fisher"] and res["p_fisher"] is not None else "卡方"
     return res
+
+
+def linear_trend(tab, scores):
+    """線性趨勢檢定（SPSS CROSSTABS 的 Linear-by-Linear Association）：M² = (N−1)r²，df = 1。
+    tab 每列為 [是, 否]，scores 為各列的分組分數（年齡層代碼）。"""
+    tab = np.asarray(tab, float)
+    x = np.repeat(np.asarray(scores, float), 2)
+    y = np.tile([1.0, 0.0], len(tab))
+    w = tab.ravel()
+    N = w.sum()
+    sx, sy, sxx, sxy = (w * x).sum(), (w * y).sum(), (w * x * x).sum(), (w * x * y).sum()
+    den = (N * sxx - sx ** 2) * (N * sy - sy ** 2)
+    if N < 2 or den <= 0:
+        return dict(r=None, m2=None, p_trend=None)
+    rr = (N * sxy - sx * sy) / math.sqrt(den)
+    m2 = (N - 1) * rr ** 2
+    return dict(r=rr, m2=m2, p_trend=stats.chi2.sf(m2, 1))
 
 
 def mixed_anova_interaction(Y, groups):
@@ -421,16 +453,45 @@ def strata_keys(by_sex=True):
     keys += [(f"age:{g}", f"{g} 歲", None, g) for g in AGE_GROUPS]
     if by_sex:
         keys += [(f"sex:{s}|age:{g}", f"{SEX_LABEL[s]}・{g} 歲", s, g) for s in ["M", "F"] for g in AGE_GROUPS]
-    return keys
+    return [k + (None,) for k in keys] + [(f"risk:{v}", RISK_LABEL[v], None, None, v) for v in (1, 0)]
 
 
-def stratum_analysis(D, sex, grp):
+def change_class(a, b, code):
+    """個人變化分類：1＝改善、0＝持平、−1＝變差（依 CHANGE_THRESH 與指標的期望方向）。"""
+    kind, thr = CHANGE_THRESH[code]
+    good = MAIN[code][3]
+    d = (b - a) / a if kind == "rel" else b - a
+    if d * good >= thr - EPS:
+        return 1
+    if d * good <= -thr + EPS:
+        return -1
+    return 0
+
+
+def indiv_change(a_vals, b_vals):
+    """a_vals、b_vals：{指標: 陣列}（同一批人的前測與比較次）。"""
+    n = len(a_vals["WEIGHT"])
+    out = dict(n=n)
+    if n < MIN_N:
+        return out
+    for code in MAIN:
+        cl = [change_class(a, b, code) for a, b in zip(a_vals[code], b_vals[code])]
+        out[code] = dict(improve=cl.count(1), stable=cl.count(0), worse=cl.count(-1))
+    pct = (np.asarray(b_vals["WEIGHT"]) - np.asarray(a_vals["WEIGHT"])) / np.asarray(a_vals["WEIGHT"]) * 100
+    out["weight_loss"] = {str(t): int((pct <= -t + EPS).sum()) for t in WEIGHT_LOSS_TARGETS}
+    out["weight_pct_mean"] = float(pct.mean())
+    return out
+
+
+def stratum_analysis(D, sex, grp, risk=None):
     K, people, long = D["K"], D["people"], D["long"]
     ids = people.index
     if sex:
         ids = ids[people.loc[ids, "SEX"] == sex]
     if grp:
         ids = ids[people.loc[ids, "AGEGRP"] == grp]
+    if risk is not None:
+        ids = ids[people.loc[ids, "RISK0"] == risk]
     comp = ids[people.loc[ids, "COMPLETE"] == 1]
     two = ids[people.loc[ids, "TWO"] == 1]
     post_wave = people.loc[two, "POSTWAVE"]
@@ -469,9 +530,52 @@ def stratum_analysis(D, sex, grp):
             item["two"] = dict(n=int(len(two)))
         cat[bc] = item
     st["binary"] = cat
+    # 個人變化：三次皆參加者（前測→各次）、參加兩次者（前測→介入後）、全體（前測→最後一次量測）
+    last = lambda tab, i: tab.loc[i, K] if i in comp else tab.loc[i, post_wave[i]]
+    ind = {}
+    for w in range(2, K + 1):
+        ind[f"c{w}"] = indiv_change({c: wide[c].loc[comp, 1].values for c in MAIN}, {c: wide[c].loc[comp, w].values for c in MAIN})
+    ind["two"] = indiv_change({c: wide[c].loc[two, 1].values for c in MAIN}, {c: post(wide[c]) for c in MAIN})
+    inc = list(comp) + list(two)
+    ind["last"] = indiv_change({c: wide[c].loc[inc, 1].values for c in MAIN}, {c: np.array([last(wide[c], i) for i in inc], float) for c in MAIN})
+    st["indiv"] = ind
     st["bmi_cat"] = [[int(((lg.WAVE == w) & (lg.BMICAT == c)).sum()) for c in BMI_CATS] for w in range(1, K + 1)]
     st["vfat_cat"] = [[int(((lg.WAVE == w) & (lg.VFCAT == c)).sum()) for c in VFAT_CATS] for w in range(1, K + 1)]
     return st
+
+
+def lmm_sensitivity(D):
+    """敏感度分析：線性混合模型（隨機截距，REML；同 SPSS MIXED），納入所有至少量測一次者（含未納入主分析者）。"""
+    import statsmodels.formula.api as smf
+    K, lg = D["K"], D["long_all"]
+    out = dict(n_people=int(lg.CUSTOMERID.nunique()), n_obs=int(len(lg)), n_wave=[int((lg.WAVE == w).sum()) for w in range(1, K + 1)], vars={})
+    z = stats.norm.ppf(0.975)
+    for c in MAIN:
+        df = lg[["CUSTOMERID", "WAVE", c]].dropna().rename(columns={c: "Y"})
+        try:
+            fit = smf.mixedlm("Y ~ C(WAVE)", df, groups=df["CUSTOMERID"]).fit(reml=True, method=["lbfgs", "bfgs", "nm"])
+        except Exception as e:  # noqa: BLE001
+            out["vars"][c] = dict(error=str(e))
+            continue
+        fe = fit.fe_params
+        V = fit.cov_params().loc[fe.index, fe.index].values
+        b = fe.values
+        means, diffs = [], []
+        for w in range(1, K + 1):
+            Lm = np.zeros(len(b))
+            Lm[0] = 1
+            if w > 1:
+                Lm[w - 1] = 1
+            m, se = Lm @ b, math.sqrt(Lm @ V @ Lm)
+            means.append(dict(mean=m, se=se, ci_lo=m - z * se, ci_hi=m + z * se))
+            if w > 1:
+                d, sd = b[w - 1], math.sqrt(V[w - 1, w - 1])
+                diffs.append(dict(b=w, diff=d, se=sd, ci_lo=d - z * sd, ci_hi=d + z * sd, p=2 * stats.norm.sf(abs(d / sd))))
+        bb, VV = b[1:], V[1:, 1:]
+        wald = float(bb @ np.linalg.solve(VV, bb))
+        out["vars"][c] = dict(means=means, diffs=diffs, wald_chi2=wald, df=K - 1, p=stats.chi2.sf(wald, K - 1),
+                              var_subject=float(fit.cov_re.iloc[0, 0]), var_resid=float(fit.scale), converged=bool(fit.converged))
+    return out
 
 
 def run(path, name=None, by_sex=True):
@@ -483,15 +587,16 @@ def run(path, name=None, by_sex=True):
     out["fields"] = dict(main=[dict(code=k, name=v[0], unit=v[1], dec=v[2], good=v[3], note=v[4]) for k, v in MAIN.items()],
                          binary=[dict(code=k, name=v[0]) for k, v in BINARY.items()], bmi_cats=BMI_CATS, vfat_cats=VFAT_CATS)
     out["composition"] = dict(age_mean=people.AGE0.mean(), age_sd=people.AGE0.std(), age_min=int(people.AGE0.min()), age_max=int(people.AGE0.max()))
-    for key, label, sex, grp in strata_keys(by_sex):
-        st = stratum_analysis(D, sex, grp)
+    for key, label, sex, grp, risk in strata_keys(by_sex):
+        st = stratum_analysis(D, sex, grp, risk)
         st["label"] = label
         out["strata"][key] = st
     # 時間 × 性別、時間 × 年齡層 交互作用（完成全部量測者；混合設計 ANOVA）
     comp = people[people.COMPLETE == 1]
     for c in MAIN:
         Y = long[long.CUSTOMERID.isin(comp.index)].pivot(index="CUSTOMERID", columns="WAVE", values=c).reindex(columns=range(1, K + 1)).loc[comp.index].values
-        out["interaction"][c] = dict(sex=mixed_anova_interaction(Y, comp.SEX.values) if by_sex else None, age=mixed_anova_interaction(Y, comp.AGEGRP.values))
+        out["interaction"][c] = dict(sex=mixed_anova_interaction(Y, comp.SEX.values) if by_sex else None, age=mixed_anova_interaction(Y, comp.AGEGRP.values),
+                                     risk=mixed_anova_interaction(Y, comp.RISK0.map(RISK_LABEL).values))
     # 各次卡方：風險分類 × 性別／年齡層
     for w in range(1, K + 1):
         ww = long[long.WAVE == w]
@@ -500,6 +605,8 @@ def run(path, name=None, by_sex=True):
             for var, labels, vals in [("SEX", ["男性", "女性"], ["M", "F"]), ("AGEGRP", ages_present, ages_present)][0 if by_sex else 1:]:
                 tab = [[int(((ww[var] == v) & (ww[bc] == 1)).sum()), int(((ww[var] == v) & (ww[bc] == 0)).sum())] for v in vals]
                 res = chisq_table(tab, labels, ["是", "否"])
+                if var == "AGEGRP":
+                    res.update(linear_trend(tab, [AGE_GROUPS.index(g) + 1 for g in ages_present]))
                 res.update(wave=w, outcome=bc, outcome_name=bname, by="性別" if var == "SEX" else "年齡層")
                 out["chisq"].append(res)
     # 代表性：分析對象中，三次皆參加 vs 參加兩次（比較前測值）
@@ -522,6 +629,8 @@ def run(path, name=None, by_sex=True):
                     binary_by_sex={bc: {s: [int(ww.loc[ww.SEX == s, bc].sum()), int((ww.SEX == s).sum())] for s in ["M", "F"]} for bc in BINARY},
                     hidden_fat=int(((ww.BMI < 24) & (ww.fat == 1)).sum()))
     out["status"] = [status(D["by_wave"][w]) for w in range(1, K + 1)]
+    out["lmm"] = lmm_sensitivity(D)
+    out["change_rules"] = dict(thresh={k: list(v) for k, v in CHANGE_THRESH.items()}, weight_loss=WEIGHT_LOSS_TARGETS)
     out = clean(out)
     out["evaluation"] = build_evaluation(out)
     return D, out
@@ -607,10 +716,15 @@ def build_evaluation(o):
         hits = [MAIN[c][0] for c in MAIN if st["rm"][c]["p_final"] < ALPHA]
         if hits:
             strat.append(f"{st['label']}（{st['n_complete']} 人）的{'、'.join(hits)}")
+    il = allst.get("indiv", {}).get("last", {})
+    if il.get("weight_loss"):
+        wl = il["weight_loss"]
+        txt += (f"以個人來看，{il['n']} 位納入分析者從前測到最後一次量測，體重減少 3% 以上者 {wl['3']} 人（{100 * wl['3'] / il['n']:.1f}%）、"
+                f"減少 5% 以上者 {wl['5']} 人（{100 * wl['5'] / il['n']:.1f}%）。")
     if strat:
         txt += "分層檢定中，" + "；".join(strat) + "隨時間有顯著變化。"
     inter = []
-    for by, lab in (("sex", "性別"), ("age", "年齡層")):
+    for by, lab in (("sex", "性別"), ("age", "年齡層"), ("risk", "前測體位")):
         if by == "sex" and not info.get("by_sex", True):
             continue
         hits = [MAIN[c][0] for c in MAIN if (o["interaction"][c].get(by) or {}).get("p_final", 1) < ALPHA]

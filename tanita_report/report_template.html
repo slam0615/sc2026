@@ -146,7 +146,11 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
   .chip{font-size:7.4pt;padding:0 6px}
   .nobreak-print{break-before:auto!important}
   #s-kpi,#s-att{break-inside:avoid}
-  #s-chisq .card,#chisq-table table,#s-strata .card{break-inside:auto}
+  #s-strata .card{break-inside:auto}
+  #s-chisq .card,#s-indiv .card,#s-sens .card{break-inside:avoid}
+  #risk-card{break-before:page}
+  .howto{padding:6px 10px;font-size:9.5pt}
+  .sumgrid td{padding:4px 4px}
   #trend .card,#s-strata .card .mini{break-inside:avoid}
   .mini-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
   .mini{padding:6px 8px!important}
@@ -161,6 +165,14 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 .mini.sig{border-color:var(--teal);box-shadow:inset 3px 0 0 var(--teal)}
 .flowbar{display:flex;height:22px;border-radius:6px;overflow:hidden;gap:2px;margin:8px 0 4px}
 .flowbar i{display:block;height:100%}
+.sumgrid td{text-align:center;vertical-align:top;white-space:normal;padding:8px 6px}
+.sumgrid th{text-align:center}.sumgrid td.name{text-align:left}
+.sumgrid .gl{font-size:12.5px;color:var(--ink);margin-top:3px;font-weight:500}
+.sumgrid .gp{font-size:11.5px;color:var(--muted)}
+.sumgrid .gt{font-size:11.5px;color:var(--ink2);margin-top:2px}
+.sumgrid td.hit{background:var(--yellow-tint)}
+.howto{background:var(--teal-tint);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--ink2);margin:0 0 14px}
+.howto b{color:var(--teal-ink)}
 .pill{display:inline-block;font-size:11.5px;border-radius:6px;padding:0 6px;background:#f1f3f3;color:var(--ink2);margin-left:4px}
 </style>
 </head>
@@ -237,22 +249,39 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
     <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">風險分類比例變化</div><div class="tbl-wrap" id="bin-table"></div></div>
   </section>
 
+  <section id="s-indiv" class="pb">
+    <h2><span class="num">7</span>個人變化：有多少人改善？</h2>
+    <p class="sub" id="indiv-sub"></p>
+    <div class="howto"><b>怎麼看：</b>前面的平均值看的是「整體」；這一節逐人比較前測與最後一次量測，計算有多少人改善、持平或變差。改善或變差須達一定幅度（見下方說明），小於此幅度視為持平，避免把量測誤差當成變化。</div>
+    <div id="indiv-body"></div>
+  </section>
+
   <section id="s-strata" class="pb">
-    <h2><span class="num">7</span><span id="strata-title">分層分析：性別與年齡層</span></h2>
+    <h2><span class="num">8</span><span id="strata-title">分層分析：性別、年齡層與前測體位</span></h2>
     <p class="sub" id="strata-sub"></p>
-    <div class="card"><div style="font-weight:500">7-1　性別</div><div class="legend" id="lg-sex" style="margin-top:6px"></div><div class="mini-grid" id="sex-charts"></div><div class="tbl-wrap" id="strata-sex" style="margin-top:10px"></div></div>
-    <div class="card" style="margin-top:14px" id="age-card"><div style="font-weight:500">7-2　年齡層</div><div class="foot" id="age-foot" style="margin:2px 0 4px"></div><div class="legend" id="lg-age"></div><div class="mini-grid" id="age-charts"></div><div class="tbl-wrap" id="strata-age" style="margin-top:10px"></div></div>
+    <div class="card"><div style="font-weight:500">8-1　性別</div><div class="legend" id="lg-sex" style="margin-top:6px"></div><div class="mini-grid" id="sex-charts"></div><div class="tbl-wrap" id="strata-sex" style="margin-top:10px"></div></div>
+    <div class="card" style="margin-top:14px" id="age-card"><div style="font-weight:500">8-2　年齡層</div><div class="foot" id="age-foot" style="margin:2px 0 4px"></div><div class="legend" id="lg-age"></div><div class="mini-grid" id="age-charts"></div><div class="tbl-wrap" id="strata-age" style="margin-top:10px"></div></div>
+    <div class="card" style="margin-top:14px" id="risk-card"><div style="font-weight:500">8-3　前測體位（前測 BMI ≥ 24 與 &lt; 24）</div><div class="foot" style="margin:2px 0 4px">依前測 BMI 分組，比較原本過重或肥胖者與體位正常者的變化。</div><div class="legend" id="lg-risk"></div><div class="mini-grid" id="risk-charts"></div><div class="tbl-wrap" id="strata-risk" style="margin-top:10px"></div></div>
   </section>
 
   <section id="s-chisq" class="pb">
-    <h2><span class="num">8</span>各次量測風險分布：卡方檢定</h2>
-    <p class="sub">每次量測的全部參加者，檢定各風險分類比例在<span id="chisq-by">性別、年齡層</span>之間是否不同。期望次數小於 5 的格子超過 20% 時，以 Fisher 精確檢定為判定依據。為保護隱私，人數少於 <span class="minn"></span> 人的組別不顯示人數，但仍納入檢定。</p>
-    <div class="card"><div class="tbl-wrap" id="chisq-table"></div></div>
-    <div class="card" style="margin-top:14px" id="s-att"><div style="font-weight:500;margin-bottom:6px">樣本代表性：三次皆參加 vs. 參加兩次者（前測值比較）</div><div class="tbl-wrap" id="att-table"></div><div class="foot" id="att-foot"></div></div>
+    <h2><span class="num">9</span>不同<span id="chisq-by">性別、年齡層</span>的風險比例比較</h2>
+    <p class="sub">每次量測的納入分析者。為保護隱私，人數少於 <span class="minn"></span> 人的組別不畫長條、不列比例，但仍納入檢定。</p>
+    <div class="howto"><b>怎麼看：</b>上方表格的每一格是「該次量測中，各組有此風險的比例是否不同」。黃底「有差異」表示差異達統計顯著（p &lt; 0.05），並註明哪一組比例較高；灰色「無明顯差異」表示各組比例的差距可能只是偶然。下方長條圖為各組實際比例。</div>
+    <div class="card" id="cq-sex"></div>
+    <div class="card" style="margin-top:14px" id="cq-age"></div>
+    <details class="no-print" style="margin-top:14px"><summary>完整檢定數值（卡方、Fisher 精確檢定、年齡趨勢檢定）</summary><div class="tbl-wrap" id="chisq-table" style="padding-bottom:12px"></div></details>
+  </section>
+
+  <section id="s-sens" class="pb">
+    <h2><span class="num">10</span>結果可信度：樣本代表性與敏感度分析</h2>
+    <p class="sub">檢查「只分析部分參加者」是否影響結論。</p>
+    <div class="card" id="s-att"><div style="font-weight:500;margin-bottom:6px">10-1　樣本代表性：三次皆參加 vs. 參加兩次者（前測值比較）</div><div class="tbl-wrap" id="att-table"></div><div class="foot" id="att-foot"></div></div>
+    <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:2px">10-2　敏感度分析：納入所有量測資料的混合模型</div><div class="foot" style="margin:0 0 8px" id="lmm-note"></div><div class="tbl-wrap" id="lmm-table"></div><div class="foot" id="lmm-foot"></div></div>
   </section>
 
   <section id="s-method" class="pb method">
-    <h2><span class="num">9</span>方法、名詞與限制</h2>
+    <h2><span class="num">11</span>方法、名詞與限制</h2>
     <div class="card" id="method"></div>
     <div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">指標名詞與單位</div><div class="tbl-wrap" id="glossary"></div></div>
   </section>
@@ -268,7 +297,9 @@ const BY_SEX = R.info.by_sex !== false;
 if (!BY_SEX) { const e = document.getElementById('chisq-by'); if (e) e.textContent = '年齡層'; }
 const PRINT = /[?&]print\b/.test(location.search);
 const C = {teal:'#069494', orange:'#FF8243', pink:'#FFC0CB', yellow:'#FCE883', ink:'#1c2a2e', ink2:'#46565b', muted:'#6f7e82', grid:'#edf0ef', line:'#e3e8e7', axis:'#c9d1cf'};
-const AGE_COLORS = ['#7fcdc8', '#3aaba5', '#069494', '#05706f', '#034b4a'];
+const AGE_COLORS = ['#7fcdc8', '#069494', '#034b4a'];
+const CHG_COLORS = [C.teal, '#d9dedd', C.orange];
+const BYL = {sex: '性別', age: '年齡層', risk: '前測體位'};
 const I = R.info, K = I.k, W = I.waves.map(w => w.label), MIN = R.min_n, AG = I.age_groups;
 const MAIN = R.fields.main, BIN = R.fields.binary;
 const F = Object.fromEntries(MAIN.map(f => [f.code, f]));
@@ -284,6 +315,9 @@ const ageLab = g => g.startsWith('≤') ? `${g.slice(1)} 歲（含）以下` : g
 const ageShort = g => g.startsWith('≤') ? `≤${g.slice(1)}` : g.startsWith('≥') ? `≥${g.slice(1)}` : g.replace('-', '–');
 const tq = df => { const z = 1.959964; return z + (z ** 3 + z) / (4 * df) + (5 * z ** 5 + 16 * z ** 3 + 3 * z) / (96 * df * df) + (3 * z ** 7 + 19 * z ** 5 + 17 * z ** 3 - 15 * z) / (384 * df ** 3); };
 const pairLabel = p => `${W[p.a - 1]}→${W[p.b - 1]}`;
+const dLab = d => d == null ? '' : Math.abs(d) < 0.2 ? '微小' : Math.abs(d) < 0.5 ? '小' : Math.abs(d) < 0.8 ? '中' : '大';
+const dCell = d => d == null ? '—' : `${sgn(d, 2)}<span class="ci">${dLab(d)}</span>`;
+const pct1 = (a, n) => n ? (100 * a / n).toFixed(1) : '—';
 const state = {sex: 'all', age: 'all'};
 document.querySelectorAll('.minn').forEach(e => e.textContent = MIN);
 
@@ -408,7 +442,7 @@ function strataBlock(groups, chartsEl, tableEl, by){
   $(chartsEl).innerHTML = MAIN.map(f => `<div class="mini"><div class="mt"><span>${esc(f.name)}</span><small>${esc(f.unit)}${R.interaction[f.code][by] ? `・交互作用 p=${pf(R.interaction[f.code][by].p_final)}${stars(R.interaction[f.code][by].p_final)}` : ''}</small></div><div class="chart" id="${chartsEl}-${f.code}"></div></div>`).join('');
   MAIN.forEach(f => lineChart($(`${chartsEl}-${f.code}`), f, ok.map(g => ({...rmSeries(R.strata[g.key].rm[f.code], g.label, g.color), short: g.short})),
     {w: 250, h: 150, l: 38, r: 14, t: 10, b: 22, fs: 10.5, r0: 3.5, ticks: 3, spread: 5}));
-  let h = `<table><thead><tr><th>指標（單位）</th>${groups.map(g => `<th>${esc(g.label)}<br><span style="font-weight:400">三次皆參加 ${R.strata[g.key].rm ? R.strata[g.key].n_complete : '&lt;' + MIN} 人</span></th>`).join('')}<th>時間 × ${by === 'sex' ? '性別' : '年齡層'}<br>交互作用 p 值</th></tr></thead><tbody>`;
+  let h = `<table><thead><tr><th>指標（單位）</th>${groups.map(g => `<th>${esc(g.label)}<br><span style="font-weight:400">三次皆參加 ${R.strata[g.key].rm ? R.strata[g.key].n_complete : '&lt;' + MIN} 人</span></th>`).join('')}<th>時間 × ${BYL[by]}<br>交互作用 p 值</th></tr></thead><tbody>`;
   MAIN.forEach(f => { const d = dd(f), it = R.interaction[f.code][by];
     h += `<tr><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + groups.map(g => { const st = R.strata[g.key];
       if (!st.rm) return '<td class="p-alt">人數不足</td>'; const s = st.rm[f.code];
@@ -416,30 +450,76 @@ function strataBlock(groups, chartsEl, tableEl, by){
       + `<td>${it ? pb(it.p_final) : '—'}${it && it.use_gg ? '<sup>GG</sup>' : ''}</td></tr>`; });
   $(tableEl).innerHTML = h + '</tbody></table>';
 }
-$('strata-sub').textContent = `以三次皆參加者分析：各分層的${W.join('→')}平均值與重複測量 ANOVA p 值；「時間 × 分組」交互作用檢定不同${BY_SEX ? '性別或' : ''}年齡層的變化趨勢是否不同（混合設計 ANOVA）。本節不受篩選影響。`;
+$('strata-sub').textContent = `以三次皆參加者分析：各分層的${W.join('→')}平均值與重複測量 ANOVA p 值；「時間 × 分組」交互作用檢定不同組別的變化趨勢是否不同（混合設計 ANOVA）。本節不受篩選影響。`;
 if (BY_SEX) {
   const sexGroups = [{key: 'sex:M', label: '男性', short: '男', color: C.teal}, {key: 'sex:F', label: '女性', short: '女', color: C.orange}];
   $('lg-sex').innerHTML = legendHTML(['男性', '女性'], [C.teal, C.orange]);
   strataBlock(sexGroups, 'sex-charts', 'strata-sex', 'sex');
 } else {
   $('lg-sex').closest('.card').remove();
-  $('strata-title').textContent = '分層分析：年齡層';
+  $('strata-title').textContent = '分層分析：年齡層與前測體位';
   $('age-card').style.marginTop = '0';
-  $('age-card').firstElementChild.textContent = '7-1　年齡層';
+  $('age-card').firstElementChild.textContent = '8-1　年齡層';
+  $('risk-card').firstElementChild.innerHTML = '8-2　前測體位（前測 BMI ≥ 24 與 &lt; 24）';
 }
 const ageGroups = AG.map((g, i) => ({key: 'age:' + g, label: ageLab(g), short: ageShort(g), color: AGE_COLORS[i]})).filter(g => R.strata[g.key].n !== 0);
 $('lg-age').innerHTML = legendHTML(ageGroups.filter(g => R.strata[g.key].rm).map(g => g.label), ageGroups.filter(g => R.strata[g.key].rm).map(g => g.color));
 strataBlock(ageGroups, 'age-charts', 'strata-age', 'age');
+const riskGroups = [{key: 'risk:1', label: '前測 BMI ≥ 24', short: '≥24', color: C.orange}, {key: 'risk:0', label: '前測 BMI < 24', short: '<24', color: C.teal}];
+$('lg-risk').innerHTML = legendHTML(riskGroups.filter(g => R.strata[g.key].rm).map(g => g.label), riskGroups.filter(g => R.strata[g.key].rm).map(g => g.color));
+strataBlock(riskGroups, 'risk-charts', 'strata-risk', 'risk');
 $('age-foot').textContent = `三次皆參加者少於 ${MIN} 人的年齡層不繪製趨勢、不列出數值，但仍納入交互作用檢定。顏色由淺至深代表年齡由低至高。`;
 
-/* ---------- 8 卡方、代表性 ---------- */
+/* ---------- 9 組間風險比例 ---------- */
+function groupedBars(el, xs, groups, label){ // xs: 各次 [{rows:[{g, yes, n}], p}]
+  const Wd = 260, H = 160, L = 30, Rr = 6, T = 18, B = 22, max = 100;
+  const Y = v => T + (max - v) / max * (H - T - B), slot = (Wd - L - Rr) / xs.length, bw = Math.min(18, (slot - 14) / groups.length);
+  let g = svgOpen(Wd, H, label);
+  [0, 50, 100].forEach(t => g += `<line x1="${L}" x2="${Wd - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="${C.grid}"/><text x="${L - 4}" y="${Y(t) + 3.5}" text-anchor="end" class="t-mut" style="font-size:9.5px">${t}%</text>`);
+  xs.forEach((x, j) => { const cx = L + slot * (j + .5), x0 = cx - bw * groups.length / 2;
+    g += `<text x="${cx}" y="${H - 7}" text-anchor="middle" style="font-size:10.5px">${W[j]}</text>`;
+    groups.forEach((gr, gi) => { const c = x.rows.find(r => r.g === gr.key); if (!c || c.n < MIN) return;
+      const v = 100 * c.yes / c.n, bx = x0 + gi * bw;
+      g += `<rect x="${bx + 1}" y="${Y(v)}" width="${bw - 2}" height="${Y(0) - Y(v)}" rx="2" fill="${gr.color}" data-tip="${esc(`<b>${W[j]}・${esc(gr.label)}</b><br>${v.toFixed(1)}%（${c.yes}/${c.n} 人）`)}"/>`;
+      g += `<text x="${bx + bw / 2}" y="${Y(v) - 3}" text-anchor="middle" class="t-ink" style="font-size:8.5px">${v.toFixed(0)}</text>`; });
+    if (x.p != null && x.p < 0.05) g += `<text x="${cx}" y="${10}" text-anchor="middle" class="t-ink" style="font-size:11px;font-weight:700">${stars(x.p)}</text>`;
+  });
+  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
+}
+function chisqBlock(by, elId, title, groups, keyOf){
+  const X = R.chisq.filter(x => x.by === by);
+  const get = (bc, w) => X.find(x => x.outcome === bc && x.wave === w);
+  const rowsOf = x => x.rows.map((r, i) => ({g: keyOf(r), label: r, yes: x.observed[i][0], n: x.observed[i][0] + x.observed[i][1]}));
+  let h = `<div style="font-weight:500;margin-bottom:6px">${title}</div><div class="tbl-wrap"><table class="sumgrid"><thead><tr><th style="text-align:left">風險分類</th>${W.map(w => `<th>${w}</th>`).join('')}</tr></thead><tbody>`;
+  BIN.forEach(b => { h += `<tr><td class="name" style="white-space:normal;min-width:150px">${esc(b.name)}</td>`;
+    I.waves.forEach((_, j) => { const x = get(b.code, j + 1);
+      if (!x || x.p_decide == null) { h += '<td class="p-alt">—</td>'; return; }
+      const sig = x.p_decide < 0.05, rs = rowsOf(x).filter(r => r.n >= MIN);
+      let hi = '';
+      if (sig && rs.length >= 2) { const top = rs.reduce((a, c) => c.yes / c.n > a.yes / a.n ? c : a); hi = `${esc(groups.find(gg => gg.key === top.g).label)}較高`; }
+      else if (sig) hi = '各組比例不同';
+      const tr = x.p_trend != null ? `<div class="gt" style="${x.p_trend < 0.05 ? 'font-weight:700;color:var(--ink)' : ''}">年齡趨勢 p = ${pf(x.p_trend)}${x.p_trend < 0.05 ? `（年齡越高比例越${x.r > 0 ? '高' : '低'}）` : ''}</div>` : '';
+      h += `<td class="${sig ? 'hit' : ''}">${sig ? '<span class="chip mid">有差異</span>' : '<span class="chip ns">無明顯差異</span>'}${hi ? `<div class="gl">${hi}</div>` : ''}<div class="gp">p = ${pf(x.p_decide)}（${x.method}）</div>${tr}</td>`; });
+    h += '</tr>'; });
+  h += `</tbody></table></div><div class="legend" style="margin-top:12px">${legendHTML(groups.map(g => g.label), groups.map(g => g.color))}</div><div class="mini-grid">`;
+  BIN.forEach(b => h += `<div class="mini"><div class="mt"><span style="white-space:normal">${esc(b.name)}</span></div><div class="chart" id="${elId}-${b.code}"></div></div>`);
+  h += `</div><div class="foot">長條上的數字為各組有此風險的比例（%）；* 表示該次量測組間差異達顯著。少於 ${MIN} 人的組別不畫長條。</div>`;
+  $(elId).innerHTML = h;
+  BIN.forEach(b => groupedBars($(`${elId}-${b.code}`), I.waves.map((_, j) => { const x = get(b.code, j + 1); return {rows: x ? rowsOf(x) : [], p: x ? x.p_decide : null}; }), groups, b.name));
+}
+if (BY_SEX) chisqBlock('性別', 'cq-sex', '9-1　性別', [{key: '男性', label: '男性', color: C.teal}, {key: '女性', label: '女性', color: C.orange}], r => r);
+if (!BY_SEX) { $('cq-sex').remove(); $('cq-age').style.marginTop = '0'; }
+chisqBlock('年齡層', 'cq-age', BY_SEX ? '9-2　年齡層' : '9-1　年齡層', AG.map((g, i) => ({key: g, label: ageLab(g), color: AGE_COLORS[i]})).filter(g => R.strata['age:' + g.key].n !== 0), r => r);
 {
-  let h = '<table><thead><tr><th>量測</th><th>風險分類</th><th>分組</th><th>各組符合比例</th><th>χ²</th><th>自由度</th><th>卡方 p 值</th><th>Fisher 精確<br>p 值</th></tr></thead><tbody>';
-  R.chisq.forEach(x => { const useF = x.use_fisher;
+  let h = '<table><thead><tr><th>量測</th><th>風險分類</th><th>分組</th><th>各組符合比例</th><th>χ²</th><th>自由度</th><th>卡方 p 值</th><th>Fisher 精確<br>p 值</th><th>判定</th><th>年齡趨勢<br>p 值</th></tr></thead><tbody>';
+  R.chisq.forEach(x => {
     const groups = x.rows.map((r, i) => { const [a, b] = x.observed[i]; const n = a + b;
       return `${esc(x.by === '年齡層' ? ageShort(r) + ' 歲' : r)}　${n < MIN ? `（&lt;${MIN} 人）` : `${(100 * a / n).toFixed(1)}%（${a}/${n}）`}`; }).join('<br>');
-    h += `<tr><td>${W[x.wave - 1]}</td><td class="name" style="white-space:normal;min-width:140px">${esc(x.outcome_name)}</td><td>${x.by}</td><td style="text-align:left">${groups}</td><td>${fx(x.chi2, 2)}</td><td>${x.df ?? '—'}</td><td>${pb(x.p, !useF && x.p < 0.05)}</td><td>${pb(x.p_fisher, useF && x.p_fisher < 0.05)}</td></tr>`; });
-  $('chisq-table').innerHTML = h + '</tbody></table>';
+    h += `<tr><td>${W[x.wave - 1]}</td><td class="name" style="white-space:normal;min-width:140px">${esc(x.outcome_name)}</td><td>${x.by}</td><td style="text-align:left">${groups}</td><td>${fx(x.chi2, 2)}</td><td>${x.df ?? '—'}</td><td>${pb(x.p, x.method === '卡方' && x.p < 0.05)}</td><td>${pb(x.p_fisher, x.method === 'Fisher' && x.p_fisher < 0.05)}</td><td>${x.method || '—'}</td><td>${x.p_trend != null ? pb(x.p_trend) : '—'}</td></tr>`; });
+  $('chisq-table').innerHTML = h + '</tbody></table><div class="foot">判定：期望次數小於 5 的格子超過 20% 時採 Fisher 精確檢定，否則採 Pearson 卡方。年齡趨勢為線性趨勢檢定（linear-by-linear association），檢定比例是否隨年齡層遞增或遞減。</div>';
+}
+/* ---------- 10 代表性、敏感度 ---------- */
+{
   const A = R.attrition;
   let a = `<table><thead><tr><th>變項（單位）</th><th>三次皆參加（n = ${A.n_completed}）</th><th>參加兩次（n = ${A.n_dropped}）</th><th>Welch t p 值</th></tr></thead><tbody>`;
   A.vars.forEach(v => a += `<tr><td class="name">${esc(v.name)}<small>${esc(v.unit)}</small></td><td>${fx(v.m1, 1)} ± ${fx(v.s1, 1)}</td><td>${fx(v.m0, 1)} ± ${fx(v.s0, 1)}</td><td>${pb(v.p)}</td></tr>`);
@@ -447,6 +527,21 @@ $('age-foot').textContent = `三次皆參加者少於 ${MIN} 人的年齡層不�
   if (sx) a += `<tr><td class="name">男性比例</td><td>${(100 * o[0][0] / (o[0][0] + o[1][0])).toFixed(1)}%</td><td>${(100 * o[0][1] / (o[0][1] + o[1][1] || 1)).toFixed(1)}%</td><td>${pb(pS)}（${sx.use_fisher ? 'Fisher' : '卡方'}）</td></tr>`;
   $('att-table').innerHTML = a + '</tbody></table>';
   $('att-foot').textContent = ((pS != null && pS < 0.05) || A.vars.some(v => v.p < 0.05)) ? '兩組在部分特性上有顯著差異，兩組結果請分開解讀。' : '兩組前測特性無顯著差異。';
+  const Lm = R.lmm, rmA = R.strata.all.rm;
+  $('lmm-note').textContent = `主分析只用三次皆參加的 ${I.n_complete} 人；混合模型則使用全部 ${Lm.n_people} 位參加者的每一筆量測（共 ${Lm.n_obs} 筆，${W.map((w, j) => `${w} ${Lm.n_wave[j]} 筆`).join('、')}），包括未納入主分析者。兩種方法結論相同，代表結果較穩定。`;
+  let t = `<table><thead><tr><th>指標（單位）</th><th>主分析<br><span style="font-weight:400">三次皆參加 ${I.n_complete} 人</span><br>${W[0]}→${W[K - 1]}</th><th>主分析<br>整體 p 值</th>`
+    + W.slice(1).map(w => `<th>混合模型<br>${W[0]}→${w}<br><span style="font-weight:400">變化量（95% CI）</span></th>`).join('') + `<th>混合模型<br>整體 p 值</th><th>結論</th></tr></thead><tbody>`;
+  MAIN.forEach(f => { const v = Lm.vars[f.code], d = dd(f), s0 = rmA ? rmA[f.code] : null;
+    if (!v || v.error) { t += `<tr><td class="name">${esc(f.name)}</td><td colspan="${3 + K}">無法估計</td></tr>`; return; }
+    const same = s0 ? (s0.p_final < 0.05) === (v.p < 0.05) : null;
+    t += `<tr class="${v.p < 0.05 ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>`
+      + (s0 ? `<td>${sgn(s0.means[K - 1] - s0.means[0], d)}</td><td>${pb(s0.p_final)}</td>` : '<td colspan="2" class="p-alt">人數不足</td>')
+      + v.diffs.map(x => `<td>${sgn(x.diff, d)}<span class="ci">${fx(x.ci_lo, d)} ~ ${fx(x.ci_hi, d)}・p = ${pf(x.p)}${stars(x.p)}</span></td>`).join('')
+      + `<td>${pb(v.p)}</td><td>${same == null ? '—' : same ? '<span class="chip low">一致</span>' : '<span class="chip mid">不一致</span>'}</td></tr>`; });
+  $('lmm-table').innerHTML = t + '</tbody></table>';
+  const diffN = rmA ? MAIN.filter(f => Lm.vars[f.code] && !Lm.vars[f.code].error && (rmA[f.code].p_final < 0.05) !== (Lm.vars[f.code].p < 0.05)) : [];
+  $('lmm-foot').textContent = '線性混合模型（隨機截距，REML），變化量 = 該次 − 前測的估計平均差。整體 p 值檢定各次平均是否不同（Wald 檢定）。'
+    + (diffN.length ? `「${diffN.map(f => f.name).join('、')}」兩種方法結論不同：混合模型使用較多資料、檢定力較高，但其結果假設缺測與否和數值本身無關；建議以主分析為主、混合模型為輔解讀。` : '各指標兩種方法結論一致。');
 }
 
 /* ---------- 9 方法 ---------- */
@@ -457,8 +552,11 @@ $('age-foot').textContent = `三次皆參加者少於 ${MIN} 人的年齡層不�
     ['主要指標', 'BMI、體重、體脂率、總體肌肉量、內臟脂肪等級。'],
     ['三次比較', '三次皆參加者以重複測量變異數分析（SPSS GLM Repeated Measures）比較；Mauchly 球形檢定 p < 0.05 時採 Greenhouse-Geisser 校正。效果量為偏 η²。事後兩兩比較採 Bonferroni 校正。Friedman 檢定為無母數參考。'],
     ['兩次參加者', '前測與介入後量測（後測或追蹤測）以配對 t 檢定比較（SPSS T-TEST PAIRS），並以 Wilcoxon 符號等級檢定為無母數參考。'],
-    ['分類變項', '風險分類比例：三次皆參加者以 Cochran\'s Q 檢定、兩兩 McNemar 精確檢定（Bonferroni 校正）；參加兩次者以 McNemar 精確檢定比較前測與介入後。各次量測（納入分析者）的組間比例以 Pearson 卡方檢定，期望次數小於 5 的格子超過 20% 時改採 Fisher 精確檢定。'],
-    ['分層分析', `${BY_SEX ? '性別；' : '本職場依需求不做性別分層；'}年齡層（首次量測年齡）分為 30 歲（含）以下、31–40 歲、41–50 歲、51–60 歲、61 歲以上。各分層分別進行重複測量 ANOVA；分組間變化趨勢差異以混合設計 ANOVA 的「時間 × 分組」交互作用檢定。人數少於 ${MIN} 人的分層不呈現結果。`],
+    ['效果量', 'Cohen\'s dz = 平均變化 ÷ 變化量的標準差。絕對值 < 0.2 微小、0.2–0.49 小、0.5–0.79 中、≥ 0.8 大。'],
+    ['個人變化', '逐人比較前測與最後一次量測（三次皆參加者為追蹤測，參加兩次者為介入後量測）：BMI、體重、總體肌肉量變化達前測值 1%，體脂率達 1 個百分點，內臟脂肪等級達 1 級，才判定為改善或變差；並計算體重減少 ≥ 3%、≥ 5% 的人數比例。'],
+    ['分類變項', '風險分類比例：三次皆參加者以 Cochran\'s Q 檢定、兩兩 McNemar 精確檢定（Bonferroni 校正）；參加兩次者以 McNemar 精確檢定比較前測與介入後。各次量測（納入分析者）的組間比例以 Pearson 卡方檢定，期望次數小於 5 的格子超過 20% 時改採 Fisher 精確檢定；年齡層另以線性趨勢檢定（linear-by-linear association）檢視比例是否隨年齡遞增或遞減。'],
+    ['分層分析', `${BY_SEX ? '性別；' : '本職場依需求不做性別分層；'}年齡層（首次量測年齡）分為 40 歲（含）以下、41–50 歲、51 歲以上；前測體位分為前測 BMI ≥ 24 與 < 24。各分層分別進行重複測量 ANOVA；分組間變化趨勢差異以混合設計 ANOVA 的「時間 × 分組」交互作用檢定。人數少於 ${MIN} 人的分層不呈現結果。`],
+    ['敏感度分析', '以線性混合模型（隨機截距、REML；SPSS MIXED）納入所有至少量測一次者的全部量測，估計各次與前測的差異，檢查主分析結論是否因只分析部分參加者而改變。此模型假設缺測與否與數值本身無關。'],
     ['顯著水準', 'α = 0.05（雙尾）。* p < 0.05、** p < 0.01、*** p < 0.001。'],
     ['研究限制', '(1) 無對照組，無法排除季節、量測時段、飲食與水分狀態等因素的影響；(2) 生物電阻抗法易受水分、進食與運動影響，小幅變化可能落在量測誤差範圍內；(3) 部分參加者未完成全部量測，主分析人數較少；(4) 同時檢定多項指標，偽陽性機率增加，單一指標的顯著結果宜保守解讀；(5) 未量測腰圍。'],
   ];
@@ -474,24 +572,54 @@ $('lg-bmi').innerHTML = legendHTML(['過輕 <18.5', '正常 18.5–23.9', '過�
 $('lg-vfat').innerHTML = legendHTML(['標準 1–9', '偏高 10–14', '過高 ≥15'], CAT_COLORS.vfat);
 
 /* ---------- 依篩選更新：3–6 節 ---------- */
-const FILTERED = ['kpi-body', 'trend', 'rm-table', 'avail-table', 'cat-bmi', 'cat-vfat', 'bin-table'];
+const FILTERED = ['kpi-body', 'trend', 'rm-table', 'avail-table', 'cat-bmi', 'cat-vfat', 'bin-table', 'indiv-body'];
+function hbar3(el, rows){ // rows: [{label, v:[改善, 持平, 變差]}]
+  const Wd = 680, L = 96, Rr = 6, barH = 22, gap = 10, T = 2, H = T + rows.length * (barH + gap);
+  let g = svgOpen(Wd, H, '個人變化分布');
+  rows.forEach((r, ri) => { const n = r.v.reduce((a, b) => a + b, 0), y = T + ri * (barH + gap), w = Wd - L - Rr; let x = L;
+    g += `<text x="${L - 8}" y="${y + barH / 2 + 4}" text-anchor="end" class="t-ink">${esc(r.label)}</text>`;
+    r.v.forEach((v, i) => { if (!v) return; const sw = v / n * w, pc = 100 * v / n;
+      g += `<rect x="${x}" y="${y}" width="${Math.max(sw - 2, .5)}" height="${barH}" rx="3" fill="${CHG_COLORS[i]}" data-tip="${esc(`<b>${esc(r.label)}・${['改善', '持平', '變差'][i]}</b><br>${v} 人（${pc.toFixed(1)}%）／ ${n} 人`)}"/>`;
+      if (sw > 34) g += `<text x="${x + sw / 2}" y="${y + barH / 2 + 4}" text-anchor="middle" style="fill:${i === 0 ? '#fff' : C.ink};font-size:11px;pointer-events:none">${pc.toFixed(0)}%</text>`;
+      x += sw; }); });
+  el.innerHTML = g + '</svg>'; bindTip(el.firstChild);
+}
+function renderIndiv(st){
+  const ind = st.indiv, last = ind && ind.last, CR = R.change_rules;
+  const rule = 'BMI、體重、總體肌肉量的變化達前測值的 1%，體脂率達 1 個百分點，內臟脂肪等級達 1 級，才算改善或變差，否則為持平。BMI、體重、體脂率、內臟脂肪等級下降為改善；總體肌肉量上升為改善。';
+  $('indiv-sub').textContent = `比較每位參加者的${W[0]}與「最後一次量測」（三次皆參加者為${W[K - 1]}，參加兩次者為其介入後量測）。`;
+  if (!last || last.n == null || !last.WEIGHT) { $('indiv-body').innerHTML = `<div class="suppress">此對象人數少於 ${MIN} 人，不呈現個人變化分布。</div>`; return; }
+  const n = last.n, wl = last.weight_loss;
+  let h = '<div class="grid g3">' + tile('體重減少 3% 以上', wl['3'], '人', `占 ${pct1(wl['3'], n)}%（共 ${n} 人）`) + tile('體重減少 5% 以上', wl['5'], '人', `占 ${pct1(wl['5'], n)}%（共 ${n} 人）`)
+    + tile('平均體重變化率', sgn(last.weight_pct_mean, 1), '%', `${W[0]}→最後一次量測`) + '</div>';
+  h += `<div class="card" style="margin-top:14px"><div style="font-weight:500">各指標改善、持平、變差人數比例（共 ${n} 人）</div><div class="legend" style="margin-top:6px">${legendHTML(['改善', '持平', '變差'], CHG_COLORS)}</div><div class="chart" id="indiv-bars" style="max-width:680px"></div><div class="foot">${rule}</div></div>`;
+  const comps = [['last', '全體納入分析者', `${W[0]}→最後一次`], ...W.slice(1).map((w, j) => [`c${j + 2}`, '三次皆參加者', `${W[0]}→${w}`]), ['two', '參加兩次者', `${W[0]}→介入後`]];
+  h += `<div class="card" style="margin-top:14px"><div style="font-weight:500;margin-bottom:6px">各比較的達標與改善比例</div><div class="tbl-wrap"><table><thead><tr><th>對象</th><th>比較</th><th>人數</th><th>體重減少<br>≥ 3%</th><th>體重減少<br>≥ 5%</th>${MAIN.map(f => `<th>${esc(f.name)}<br><span style="font-weight:400">改善（變差）</span></th>`).join('')}</tr></thead><tbody>`;
+  comps.forEach(([k, who, lab]) => { const c = ind[k];
+    if (!c || !c.WEIGHT) { h += `<tr><td class="name">${who}</td><td>${lab}</td><td>${c && c.n != null ? c.n : '&lt;' + MIN}</td><td colspan="${2 + MAIN.length}" class="p-alt" style="text-align:center">人數少於 ${MIN} 人，不呈現</td></tr>`; return; }
+    h += `<tr><td class="name">${who}</td><td>${lab}</td><td>${c.n}</td><td>${pct1(c.weight_loss['3'], c.n)}%<span class="ci">${c.weight_loss['3']} 人</span></td><td>${pct1(c.weight_loss['5'], c.n)}%<span class="ci">${c.weight_loss['5']} 人</span></td>`
+      + MAIN.map(f => `<td>${pct1(c[f.code].improve, c.n)}%<span class="ci">變差 ${pct1(c[f.code].worse, c.n)}%</span></td>`).join('') + '</tr>'; });
+  h += '</tbody></table></div><div class="foot">百分比為占該比較人數的比例；括號內為變差比例，其餘為持平。</div></div>';
+  $('indiv-body').innerHTML = h;
+  hbar3($('indiv-bars'), MAIN.map(f => ({label: f.name, v: [last[f.code].improve, last[f.code].stable, last[f.code].worse]})));
+}
 function render(){
   const k = skey(), st = R.strata[k];
   const nc = st.n_complete != null && st.n_complete >= MIN ? st.n_complete : '&lt;' + MIN;
   $('f-n').innerHTML = `目前對象：<b>${esc(st.label)}</b>　參加 <b>${st.n ?? '&lt;' + MIN}</b> 人・三次皆參加 <b>${nc}</b> 人`;
-  $('print-scope').textContent = `第 3–6 節呈現對象：${st.label}（參加 ${st.n} 人，三次皆參加 ${st.n_complete} 人）`;
+  $('print-scope').textContent = `第 3–7 節呈現對象：${st.label}（參加 ${st.n} 人，三次皆參加 ${st.n_complete} 人）`;
   if (st.suppressed) {
     const msg = `<div class="suppress">此分層參加人數少於 ${MIN} 人，為保護個人隱私不呈現統計結果。請放寬篩選條件。</div>`;
-    FILTERED.forEach(id => $(id).innerHTML = ['kpi-body', 'rm-table', 'avail-table'].includes(id) ? msg : ''); return;
+    FILTERED.forEach(id => $(id).innerHTML = ['kpi-body', 'rm-table', 'avail-table', 'indiv-body'].includes(id) ? msg : ''); return;
   }
   // 5-2 參加兩次者（前測＋後測或追蹤測）合併
   $('two-note').textContent = `只參加兩次（${W[0]}＋${W.slice(1).join('或')}）者合併分析，${W[0]}與其介入後量測（${Object.entries(I.n_two_by_wave).map(([k, n]) => `${k}`).join('或')}）比較；配對 t 檢定，變化量 = 介入後 − ${W[0]}，下方為 95% 信賴區間；Wilcoxon 符號等級檢定為無母數參考。`;
   if (st.two[MAIN[0].code].diff == null) {
     $('avail-table').innerHTML = `<div class="suppress">此對象中參加兩次者少於 ${MIN} 人，不進行檢定。</div>`;
   } else {
-    let v = `<table><thead><tr><th>指標（單位）</th><th>n</th><th>${W[0]}</th><th>介入後</th><th>變化量（95% CI）</th><th>變化率</th><th>配對 t<br>p 值</th><th>Wilcoxon<br>p 值</th><th>判定</th></tr></thead><tbody>`;
+    let v = `<table><thead><tr><th>指標（單位）</th><th>n</th><th>${W[0]}</th><th>介入後</th><th>變化量（95% CI）</th><th>變化率</th><th>配對 t<br>p 值</th><th>Wilcoxon<br>p 值</th><th>效果量 d</th><th>判定</th></tr></thead><tbody>`;
     MAIN.forEach(f => { const d = dd(f), p = st.two[f.code];
-      v += `<tr class="${p.p < 0.05 ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td><td>${p.n}</td><td>${fx(p.mean_a, d)}</td><td>${fx(p.mean_b, d)}</td><td>${sgn(p.diff, d)}<span class="ci">${fx(p.ci_lo, d)} ~ ${fx(p.ci_hi, d)}</span></td><td>${sgn(p.pct, 1)}%</td><td>${pb(p.p)}</td><td>${pb(p.p_w, false)}</td><td>${verdictChip(f, p.diff, p.p)}</td></tr>`; });
+      v += `<tr class="${p.p < 0.05 ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td><td>${p.n}</td><td>${fx(p.mean_a, d)}</td><td>${fx(p.mean_b, d)}</td><td>${sgn(p.diff, d)}<span class="ci">${fx(p.ci_lo, d)} ~ ${fx(p.ci_hi, d)}</span></td><td>${sgn(p.pct, 1)}%</td><td>${pb(p.p)}</td><td>${pb(p.p_w, false)}</td><td>${dCell(p.dz)}</td><td>${verdictChip(f, p.diff, p.p)}</td></tr>`; });
     $('avail-table').innerHTML = v + '</tbody></table>';
   }
   // 6 分級
@@ -506,6 +634,7 @@ function render(){
       + (it.pairs ? `<td>${it.yes_complete.join(' → ')}<span class="ci">共 ${it.n_complete} 人</span></td><td>${pb(it.p)}${it.p < 0.05 ? `<span class="ci">${it.pairs.map(p => `${pairLabel(p)} p=${pf(p.p_bonf)}`).join('；')}</span>` : ''}</td>` : '')
       + (it.two.p == null ? `<td class="p-alt" colspan="2">人數不足</td>` : `<td>${it.two.yes_pre} → ${it.two.yes_post}<span class="ci">共 ${it.two.n} 人</span></td><td>${pb(it.two.p)}</td>`) + '</tr>'; });
   $('bin-table').innerHTML = b + '</tbody></table><div class="foot">Cochran\'s Q 達顯著時，下方列出兩兩 McNemar 檢定（Bonferroni 校正）。參加兩次者以 McNemar 精確檢定比較前測與介入後。</div>';
+  renderIndiv(st);
   if (!st.rm) {
     const msg = `<div class="suppress">此分層三次皆參加者少於 ${MIN} 人，不進行三次比較；「與前測的配對比較」與分級分布仍可參考。</div>`;
     ['kpi-body', 'rm-table'].forEach(id => $(id).innerHTML = msg); $('trend').innerHTML = ''; $('rm-note').textContent = ''; return;
@@ -524,12 +653,12 @@ function render(){
       <div class="chart" id="tr-${f.code}"></div><div class="foot" style="margin-top:2px">${s.pairs.map(p => `${pairLabel(p)} ${sgn(p.diff, dd(f))}（p = ${pf(p.p_bonf)}）`).join('；')}</div></div>`; }).join('');
   MAIN.forEach(f => { const s = st.rm[f.code]; lineChart($('tr-' + f.code), f, [rmSeries(s, '三次皆參加者', C.teal)], {labels: true, t: 30, brackets: s.pairs.map(p => ({a: p.a, b: p.b, p: p.p_bonf}))}); });
   // 5-1 RM 表
-  $('rm-note').textContent = `n = ${st.n_complete}。平均值 ± 標準差；違反球形假設（Mauchly p < 0.05）時採 Greenhouse-Geisser 校正（GG）；兩兩比較採 Bonferroni 校正。`;
-  let h = `<table><thead><tr><th>指標（單位）</th>${W.map(w => `<th>${w}</th>`).join('')}<th>F 值</th><th>整體<br>p 值</th><th>偏 η²</th><th>Friedman<br>p 值</th>${st.rm[MAIN[0].code].pairs.map(p => `<th>${pairLabel(p)}<br>p 值</th>`).join('')}<th>判定</th></tr></thead><tbody>`;
+  $('rm-note').textContent = `n = ${st.n_complete}。平均值 ± 標準差；違反球形假設（Mauchly p < 0.05）時採 Greenhouse-Geisser 校正（GG）；兩兩比較採 Bonferroni 校正。效果量 d（Cohen's dz）= 平均變化 ÷ 變化量標準差，表示變化幅度大小：絕對值 < 0.2 微小、0.2–0.49 小、0.5–0.79 中、≥ 0.8 大；人數少時 p 值不顯著不代表沒有效果，可參考效果量。`;
+  let h = `<table><thead><tr><th>指標（單位）</th>${W.map(w => `<th>${w}</th>`).join('')}<th>F 值</th><th>整體<br>p 值</th><th>偏 η²</th><th>Friedman<br>p 值</th>${st.rm[MAIN[0].code].pairs.map(p => `<th>${pairLabel(p)}<br>p 值</th>`).join('')}<th>效果量 d<br>${W[0]}→${W[K - 1]}</th><th>判定</th></tr></thead><tbody>`;
   MAIN.forEach(f => { const s = st.rm[f.code], d = dd(f), df = s.use_gg ? `${fx(s.df1_gg, 2)}, ${fx(s.df2_gg, 2)}` : `${s.df1}, ${s.df2}`;
     h += `<tr class="${s.p_final < 0.05 ? 'sig' : ''}"><td class="name">${esc(f.name)}<small>${esc(f.unit)}</small></td>` + s.means.map((m, j) => `<td>${fx(m, d)}<span class="ci">± ${fx(s.sds[j], d)}</span></td>`).join('')
       + `<td>${fx(s.F, 2)}<span class="ci">df ${df}${s.use_gg ? '・GG' : ''}</span></td><td>${pb(s.p_final)}</td><td>${fx(s.pes, 3)}</td><td>${pb(s.friedman_p, false)}</td>`
-      + s.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('') + `<td>${verdictChip(f, s.means[K - 1] - s.means[0], s.p_final)}</td></tr>`; });
+      + s.pairs.map(p => `<td>${pb(p.p_bonf)}</td>`).join('') + `<td>${dCell(s.pairs.find(p => p.a === 1 && p.b === K).dz)}</td><td>${verdictChip(f, s.means[K - 1] - s.means[0], s.p_final)}</td></tr>`; });
   $('rm-table').innerHTML = h + '</tbody></table>';
 }
 render();
