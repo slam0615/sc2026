@@ -16,6 +16,7 @@
 pip install pandas scipy statsmodels openpyxl xlrd pyreadstat
 python build_report.py 匯出檔.xls [輸出資料夾] --name 職場名稱   # HTML + Excel + SPSS + PDF
 python build_report.py 匯出檔.xls --name 職場名稱 --no-pdf
+python build_report.py 匯出檔.xls --name 職場名稱 --no-sex   # 使用者指定時：不做性別分層、時間×性別交互作用與性別卡方
 ```
 
 PDF 需要 Node.js 與 Playwright。沒有的話，用瀏覽器開啟 HTML 後選「列印 → 另存為 PDF」，版面相同。

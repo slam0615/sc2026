@@ -414,11 +414,13 @@ def mixed_anova_interaction(Y, groups):
 
 
 # ---------------------------------------------------------------- 分析
-def strata_keys():
+def strata_keys(by_sex=True):
     keys = [("all", "全體", None, None)]
-    keys += [(f"sex:{s}", SEX_LABEL[s], s, None) for s in ["M", "F"]]
+    if by_sex:
+        keys += [(f"sex:{s}", SEX_LABEL[s], s, None) for s in ["M", "F"]]
     keys += [(f"age:{g}", f"{g} 歲", None, g) for g in AGE_GROUPS]
-    keys += [(f"sex:{s}|age:{g}", f"{SEX_LABEL[s]}・{g} 歲", s, g) for s in ["M", "F"] for g in AGE_GROUPS]
+    if by_sex:
+        keys += [(f"sex:{s}|age:{g}", f"{SEX_LABEL[s]}・{g} 歲", s, g) for s in ["M", "F"] for g in AGE_GROUPS]
     return keys
 
 
@@ -472,14 +474,16 @@ def stratum_analysis(D, sex, grp):
     return st
 
 
-def run(path, name=None):
+def run(path, name=None, by_sex=True):
+    """by_sex=False：不做性別分層、時間 × 性別交互作用與性別卡方（使用者指定的職場，例如性別幾乎單一）。"""
     D = load_data(path, name)
     K, people, long, info = D["K"], D["people"], D["long"], D["info"]
+    info["by_sex"] = by_sex
     out = dict(info=info, min_n=MIN_N, strata={}, interaction={}, chisq=[], attrition={})
     out["fields"] = dict(main=[dict(code=k, name=v[0], unit=v[1], dec=v[2], good=v[3], note=v[4]) for k, v in MAIN.items()],
                          binary=[dict(code=k, name=v[0]) for k, v in BINARY.items()], bmi_cats=BMI_CATS, vfat_cats=VFAT_CATS)
     out["composition"] = dict(age_mean=people.AGE0.mean(), age_sd=people.AGE0.std(), age_min=int(people.AGE0.min()), age_max=int(people.AGE0.max()))
-    for key, label, sex, grp in strata_keys():
+    for key, label, sex, grp in strata_keys(by_sex):
         st = stratum_analysis(D, sex, grp)
         st["label"] = label
         out["strata"][key] = st
@@ -487,13 +491,13 @@ def run(path, name=None):
     comp = people[people.COMPLETE == 1]
     for c in MAIN:
         Y = long[long.CUSTOMERID.isin(comp.index)].pivot(index="CUSTOMERID", columns="WAVE", values=c).reindex(columns=range(1, K + 1)).loc[comp.index].values
-        out["interaction"][c] = dict(sex=mixed_anova_interaction(Y, comp.SEX.values), age=mixed_anova_interaction(Y, comp.AGEGRP.values))
+        out["interaction"][c] = dict(sex=mixed_anova_interaction(Y, comp.SEX.values) if by_sex else None, age=mixed_anova_interaction(Y, comp.AGEGRP.values))
     # 各次卡方：風險分類 × 性別／年齡層
     for w in range(1, K + 1):
         ww = long[long.WAVE == w]
         ages_present = [g for g in AGE_GROUPS if (ww.AGEGRP == g).any()]
         for bc, (bname, _) in BINARY.items():
-            for var, labels, vals in [("SEX", ["男性", "女性"], ["M", "F"]), ("AGEGRP", ages_present, ages_present)]:
+            for var, labels, vals in [("SEX", ["男性", "女性"], ["M", "F"]), ("AGEGRP", ages_present, ages_present)][0 if by_sex else 1:]:
                 tab = [[int(((ww[var] == v) & (ww[bc] == 1)).sum()), int(((ww[var] == v) & (ww[bc] == 0)).sum())] for v in vals]
                 res = chisq_table(tab, labels, ["是", "否"])
                 res.update(wave=w, outcome=bc, outcome_name=bname, by="性別" if var == "SEX" else "年齡層")
@@ -510,7 +514,7 @@ def run(path, name=None):
                         s0=y.std() if len(y) > 1 else None, t=t.statistic if t else None, df=t.df if t else None, p=t.pvalue if t else None))
     tab = [[int(((t1.SEX == s) & flag).sum()), int(((t1.SEX == s) & ~flag).sum())] for s in ["M", "F"]]
     out["attrition"] = dict(n_completed=int(flag.sum()), n_dropped=int((~flag).sum()), vars=att,
-                            sex=chisq_table(tab, ["男性", "女性"], ["三次皆參加", "參加兩次"]))
+                            sex=chisq_table(tab, ["男性", "女性"], ["三次皆參加", "參加兩次"]) if by_sex else None)
 
     def status(ww):
         return dict(n=len(ww), bmi_cat=[int((ww.BMICAT == c).sum()) for c in BMI_CATS], vfat_cat=[int((ww.VFCAT == c).sum()) for c in VFAT_CATS],
@@ -556,8 +560,10 @@ def build_evaluation(o):
     bs = b["binary_by_sex"]["fat"]
     lvl = "high" if pct(fat) >= 50 else "mid" if pct(fat) >= 30 else "low"
     findings.append(dict(title="體脂率", level=lvl, text=(
-        f"依國民健康署標準（男性 ≥ 25%、女性 ≥ 30% 屬肥胖），前測體脂率超標 {fat} 人（{pct(fat):.1f}%；"
-        f"男性 {bs['M'][0]}/{bs['M'][1]}、女性 {bs['F'][0]}/{bs['F'][1]}）{trail('fat')}。" + sex_gap(o, "fat")
+        f"依國民健康署標準（男性 ≥ 25%、女性 ≥ 30% 屬肥胖），前測體脂率超標 {fat} 人（{pct(fat):.1f}%"
+        + ("；" if info.get("by_sex", True) else "")
+        + (f"男性 {bs['M'][0]}/{bs['M'][1]}、女性 {bs['F'][0]}/{bs['F'][1]}）" if info.get("by_sex", True) else "）")
+        + f"{trail('fat')}。" + sex_gap(o, "fat")
         + (f"前測有 {b['hidden_fat']} 人 BMI 未達 24 但體脂率已超標（俗稱「隱性肥胖」），不宜僅以體重判斷。" if b["hidden_fat"] else ""))))
     lvl = "high" if pct(vf) >= 40 else "mid" if pct(vf) >= 20 else "low"
     findings.append(dict(title="內臟脂肪", level=lvl, text=(
@@ -605,6 +611,8 @@ def build_evaluation(o):
         txt += "分層檢定中，" + "；".join(strat) + "隨時間有顯著變化。"
     inter = []
     for by, lab in (("sex", "性別"), ("age", "年齡層")):
+        if by == "sex" and not info.get("by_sex", True):
+            continue
         hits = [MAIN[c][0] for c in MAIN if (o["interaction"][c].get(by) or {}).get("p_final", 1) < ALPHA]
         if hits:
             inter.append(f"{'、'.join(hits)}的變化趨勢在不同{lab}之間有差異（時間 × {lab}交互作用 p < 0.05）")

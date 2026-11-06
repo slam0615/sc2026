@@ -70,6 +70,7 @@ def mark(ws, r0, r1, headers):
 
 def build(D, res, out_path):
     K, people = D["K"], D["people"]
+    BYS = res["info"].get("by_sex", True)
     W = D["names"]
     codes = list(A.MAIN)
     info, allst = res["info"], res["strata"]["all"]
@@ -89,10 +90,10 @@ def build(D, res, out_path):
         ("重複測量ANOVA", "三次皆參加者：平方和拆解、F、p、Mauchly 球形檢定、Greenhouse-Geisser 校正、偏 η²"),
         ("兩兩比較", "三次皆參加者的配對 t 檢定與 Bonferroni 校正（＝ SPSS GLM 的 Bonferroni 事後比較）"),
         ("參加兩次者", "只參加兩次（前測＋後測或追蹤測其一）者合併：前測 vs 介入後的配對 t 檢定"),
-        ("交互作用", "時間 × 性別、時間 × 年齡層（混合設計 ANOVA，三次皆參加者）"),
-        ("分層ANOVA", "性別、年齡層各分層的重複測量 ANOVA（Python 值，以 SPSS 語法第 5 段驗證）"),
+        ("交互作用", ("時間 × 性別、" if BYS else "") + "時間 × 年齡層（混合設計 ANOVA，三次皆參加者）"),
+        ("分層ANOVA", ("性別、" if BYS else "") + "年齡層各分層的重複測量 ANOVA（Python 值，以 SPSS 語法第 5 段驗證）"),
         ("CochranQ_McNemar", "風險分類變化：Cochran's Q、McNemar 精確檢定"),
-        ("卡方檢定", "各次量測：風險分類 × 性別／年齡層；Fisher 精確檢定為 Python 值"),
+        ("卡方檢定", "各次量測：風險分類 × " + ("性別／" if BYS else "") + "年齡層；Fisher 精確檢定為 Python 值"),
         ("流失分析", "前測參加者中三次皆參加 vs 未完成者的前測值比較"),
         ("", None), ("顏色說明", ""),
         ("藍色字", "原始資料（直接輸入的數值）"), ("黑色字", "Excel 公式計算結果"),
@@ -319,7 +320,7 @@ def build(D, res, out_path):
         r = 5
         for code in codes:
             Z1, Z2 = rng(zcol[code][0]), rng(zcol[code][1])
-            for by, grng, levels in (("性別", SEXR, ["M", "F"]), ("年齡層", AGER, A.AGE_GROUPS)):
+            for by, grng, levels in (("性別", SEXR, ["M", "F"]), ("年齡層", AGER, A.AGE_GROUPS))[0 if BYS else 1:]:
                 cells = [A.MAIN[code][0], by, f"=COUNTIF({COMP},1)", f"=AVERAGEIF({COMP},1,{Z1})", f"=AVERAGEIF({COMP},1,{Z2})"]
                 gcells = []
                 for gi in range(maxg):
@@ -414,7 +415,7 @@ def build(D, res, out_path):
 
     # ------------------------------------------------------------ 卡方檢定
     ws = wb.create_sheet("卡方檢定")
-    title(ws, "各次量測：風險分類 × 性別／年齡層（Pearson 卡方）",
+    title(ws, "各次量測：風險分類 × " + ("性別／" if BYS else "") + "年齡層（Pearson 卡方）",
           "期望次數 = 列合計 × 欄合計 ÷ 總數；χ² = Σ(O−E)²/E；p = CHIDIST(χ², df)。期望次數 < 5 的格子超過 20% 時參考 Fisher（Python）。")
     ws.column_dimensions["A"].width = 36
     for j in range(2, 12):
@@ -480,6 +481,91 @@ def build(D, res, out_path):
         r += 1
     style(ws, 5, r - 1, 1, 12, fmt="0.0000")
     mark(ws, 5, r - 1, hd)
+
+    # ------------------------------------------------------------ 趨勢圖（Excel 原生圖表，可直接編輯）
+    from openpyxl.chart import BarChart, LineChart, Reference
+    ws = wb.create_sheet("趨勢圖")
+    title(ws, "趨勢圖（Excel 原生圖表，可直接編輯樣式、標題與座標軸）",
+          "左側資料表為圖表來源：平均值以公式自寬格式資料計算；分級人數為各次納入分析者（藍字數值）。人數少於 %d 人的年齡層不列入。" % A.MIN_N)
+    PAL = ["069494", "FF7F50", "E8559B", "F2B705", "4E79A7"]
+    AGE_PAL = ["B6E3E0", "6CC5BF", "069494", "04706F", "023E3D"]
+
+    def line_chart(ttl, ytitle, r_head, r0, r1, c0, c1, colors):
+        ch = LineChart()
+        ch.title, ch.y_axis.title, ch.x_axis.title = ttl, ytitle, None
+        ch.height, ch.width = 7.5, 13
+        ch.add_data(Reference(ws, min_col=c0, max_col=c1, min_row=r_head, max_row=r1), titles_from_data=True)
+        ch.set_categories(Reference(ws, min_col=1, min_row=r0, max_row=r1))
+        for k, se in enumerate(ch.series):
+            se.marker.symbol, se.marker.size, se.smooth = "circle", 7, False
+            se.graphicalProperties.line.solidFill = colors[k % len(colors)]
+            se.graphicalProperties.line.width = 28000
+            se.marker.graphicalProperties.solidFill = colors[k % len(colors)]
+            se.marker.graphicalProperties.line.solidFill = colors[k % len(colors)]
+        ch.y_axis.majorGridlines = None
+        ch.y_axis.delete = ch.x_axis.delete = False
+        ch.legend.position = "b"
+        return ch
+
+    charts = []
+    r = 4
+    # (1) 三次皆參加者平均
+    ws.cell(r, 1, "三次皆參加者平均（n = %d）" % info["n_complete"]).font = F_BOLD
+    r += 1
+    head(ws, r, ["量測"] + [f"{A.MAIN[c][0]}（{A.MAIN[c][1]}）" for c in codes], [12] + [14] * len(codes))
+    for w in range(K):
+        ws.cell(r + 1 + w, 1, W[w]).font = F_BOLD
+        for j, c in enumerate(codes):
+            ws.cell(r + 1 + w, 2 + j, f"=AVERAGEIF({COMP},1,{rng(col[c][w])})").number_format = "0.00"
+    for j, c in enumerate(codes):
+        charts.append(line_chart(f"{A.MAIN[c][0]}：三次皆參加者平均", A.MAIN[c][1], r, r + 1, r + K, 2 + j, 2 + j, PAL[j:] + PAL))
+    r += K + 3
+    # (2) 年齡層分層（三次皆參加者）
+    ok_age = [g for g in A.AGE_GROUPS if "rm" in res["strata"].get(f"age:{g}", {})]
+    if BYS:
+        ok_sex = [s for s in ("M", "F") if "rm" in res["strata"].get(f"sex:{s}", {})]
+    else:
+        ok_sex = []
+    for by, groups, gr, labf, pal in (("年齡層", ok_age, AGER, lambda g: f"{g} 歲", AGE_PAL), ("性別", ok_sex, SEXR, A.SEX_LABEL.get, ["069494", "FF7F50"])):
+        if len(groups) < 2:
+            continue
+        for c in codes:
+            ws.cell(r, 1, f"{A.MAIN[c][0]}（{A.MAIN[c][1]}）× {by}：三次皆參加者平均").font = F_BOLD
+            r += 1
+            head(ws, r, ["量測"] + [labf(g) for g in groups])
+            for w in range(K):
+                ws.cell(r + 1 + w, 1, W[w]).font = F_BOLD
+                for j, g in enumerate(groups):
+                    ws.cell(r + 1 + w, 2 + j, f'=AVERAGEIFS({rng(col[c][w])},{COMP},1,{gr},"{g}")').number_format = "0.00"
+            charts.append(line_chart(f"{A.MAIN[c][0]}：依{by}", A.MAIN[c][1], r, r + 1, r + K, 2, 1 + len(groups),
+                                     pal if len(groups) == len(pal) else pal[-len(groups):] if by == "年齡層" else pal))
+            r += K + 3
+    # (3) 分級分布（各次納入分析者，百分比堆疊長條）
+    for key, cats, ttl in (("bmi_cat", A.BMI_CATS, "BMI 分級（國民健康署）"), ("vfat_cat", A.VFAT_CATS, "內臟脂肪等級（TANITA 原廠）")):
+        ws.cell(r, 1, f"{ttl}：各次人數").font = F_BOLD
+        r += 1
+        head(ws, r, ["量測"] + list(cats))
+        for w in range(K):
+            ws.cell(r + 1 + w, 1, W[w]).font = F_BOLD
+            for j, v in enumerate(res["status"][w][key]):
+                ws.cell(r + 1 + w, 2 + j, int(v)).font = F_INPUT
+        ch = BarChart()
+        ch.type, ch.grouping, ch.overlap = "bar", "percentStacked", 100
+        ch.title, ch.height, ch.width = ttl, 7.5, 13
+        ch.add_data(Reference(ws, min_col=2, max_col=1 + len(cats), min_row=r, max_row=r + K), titles_from_data=True)
+        ch.set_categories(Reference(ws, min_col=1, min_row=r + 1, max_row=r + K))
+        cols_ = ["F2B705", "069494", "E8559B", "FF7F50"] if key == "bmi_cat" else ["069494", "E8559B", "FF7F50"]
+        for k, se in enumerate(ch.series):
+            se.graphicalProperties.solidFill = cols_[k % len(cols_)]
+            se.graphicalProperties.line.solidFill = cols_[k % len(cols_)]
+        ch.x_axis.scaling.orientation = "maxMin"
+        ch.y_axis.delete = ch.x_axis.delete = False
+        ch.y_axis.number_format = "0%"
+        ch.legend.position = "b"
+        charts.append(ch)
+        r += K + 3
+    for i, ch in enumerate(charts):
+        ws.add_chart(ch, f"{L(10 + (i % 2) * 9)}{4 + (i // 2) * 16}")
 
     for wsx in wb.worksheets:
         wsx.sheet_view.showGridLines = wsx.title != "說明"
@@ -554,6 +640,7 @@ def write_spss(D, res, xlsx_path, ids):
 
 
 def write_sps(res, wide_name, long_name, path, K, W):
+    BYS = res["info"].get("by_sex", True)
     main = list(A.MAIN)
     T = lambda c: " ".join(f"{c}_T{w}" for w in range(1, K + 1))
     all_pairs = list(combinations(range(1, K + 1), 2))
@@ -593,16 +680,17 @@ TEMPORARY.
 SELECT IF TWO = 1.
 NPAR TESTS /WILCOXON={' '.join(f'{c}_T1' for c in main)} WITH {' '.join(f'{c}_POST' for c in main)} (PAIRED) /MISSING ANALYSIS.
 
-* ---------- 5. 分層：性別、年齡層各自的重複測量 ANOVA.
-SORT CASES BY SEX.
-SPLIT FILE LAYERED BY SEX.""")
-    out += [f"GLM {T(c)} /WSFACTOR=time {K} Polynomial /METHOD=SSTYPE(3) /PRINT=DESCRIPTIVE ETASQ /WSDESIGN=time." for c in main]
-    out.append("SPLIT FILE OFF.\nSORT CASES BY AGEGRP.\nSPLIT FILE LAYERED BY AGEGRP.")
+* ---------- 5. 分層：""" + ("性別、" if BYS else "") + """年齡層各自的重複測量 ANOVA.""")
+    if BYS:
+        out.append("SORT CASES BY SEX.\nSPLIT FILE LAYERED BY SEX.")
+        out += [f"GLM {T(c)} /WSFACTOR=time {K} Polynomial /METHOD=SSTYPE(3) /PRINT=DESCRIPTIVE ETASQ /WSDESIGN=time." for c in main]
+        out.append("SPLIT FILE OFF.")
+    out.append("SORT CASES BY AGEGRP.\nSPLIT FILE LAYERED BY AGEGRP.")
     out += [f"GLM {T(c)} /WSFACTOR=time {K} Polynomial /METHOD=SSTYPE(3) /PRINT=DESCRIPTIVE ETASQ /WSDESIGN=time." for c in main]
     out.append("SPLIT FILE OFF.")
-    out.append("\n* ---------- 6. 時間 × 性別、時間 × 年齡層 交互作用（混合設計 ANOVA）；PLOT 為分層趨勢圖.")
+    out.append("\n* ---------- 6. " + ("時間 × 性別、" if BYS else "") + "時間 × 年齡層 交互作用（混合設計 ANOVA）；PLOT 為分層趨勢圖.")
     for c in main:
-        for g in ("SEX", "AGEGRP"):
+        for g in (("SEX", "AGEGRP") if BYS else ("AGEGRP",)):
             out.append(f"GLM {T(c)} BY {g}\n  /WSFACTOR=time {K} Polynomial /METHOD=SSTYPE(3)\n  /PLOT=PROFILE(time*{g})\n  /PRINT=DESCRIPTIVE ETASQ /WSDESIGN=time /DESIGN={g}.")
     out.append(f"""
 * ---------- 7. 風險分類變化.
@@ -624,16 +712,14 @@ NPAR TESTS
 TEMPORARY.
 SELECT IF HAS1 = 1.
 T-TEST GROUPS=COMPLETE(1 0) /VARIABLES=AGE0 {' '.join(f'{c}_T1' for c in main)} /CRITERIA=CI(.95).
-TEMPORARY.
-SELECT IF HAS1 = 1.
-CROSSTABS /TABLES=SEX BY COMPLETE /STATISTICS=CHISQ /CELLS=COUNT EXPECTED ROW.
+{"TEMPORARY." + chr(10) + "SELECT IF HAS1 = 1." + chr(10) + "CROSSTABS /TABLES=SEX BY COMPLETE /STATISTICS=CHISQ /CELLS=COUNT EXPECTED ROW." if BYS else ""}
 
-* ---------- 9. 各次量測：風險分類 × 性別／年齡層 卡方與 Fisher 精確檢定（長格式）.
+* ---------- 9. 各次量測：風險分類 × {"性別／" if BYS else ""}年齡層 卡方與 Fisher 精確檢定（長格式）.
 GET FILE='{long_name}'.
 DATASET NAME long WINDOW=FRONT.
 SORT CASES BY TIME.
 SPLIT FILE LAYERED BY TIME.
-CROSSTABS /TABLES={' '.join(flags)} BY SEX AGEGRP
+CROSSTABS /TABLES={' '.join(flags)} BY {"SEX AGEGRP" if BYS else "AGEGRP"}
   /STATISTICS=CHISQ /CELLS=COUNT EXPECTED ROW /METHOD=EXACT TIMER(5).
 SPLIT FILE OFF.
 """)

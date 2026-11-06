@@ -238,7 +238,7 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
   </section>
 
   <section id="s-strata" class="pb">
-    <h2><span class="num">7</span>分層分析：性別與年齡層</h2>
+    <h2><span class="num">7</span><span id="strata-title">分層分析：性別與年齡層</span></h2>
     <p class="sub" id="strata-sub"></p>
     <div class="card"><div style="font-weight:500">7-1　性別</div><div class="legend" id="lg-sex" style="margin-top:6px"></div><div class="mini-grid" id="sex-charts"></div><div class="tbl-wrap" id="strata-sex" style="margin-top:10px"></div></div>
     <div class="card" style="margin-top:14px" id="age-card"><div style="font-weight:500">7-2　年齡層</div><div class="foot" id="age-foot" style="margin:2px 0 4px"></div><div class="legend" id="lg-age"></div><div class="mini-grid" id="age-charts"></div><div class="tbl-wrap" id="strata-age" style="margin-top:10px"></div></div>
@@ -246,7 +246,7 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 
   <section id="s-chisq" class="pb">
     <h2><span class="num">8</span>各次量測風險分布：卡方檢定</h2>
-    <p class="sub">每次量測的全部參加者，檢定各風險分類比例在性別、年齡層之間是否不同。期望次數小於 5 的格子超過 20% 時，以 Fisher 精確檢定為判定依據。為保護隱私，人數少於 <span class="minn"></span> 人的組別不顯示人數，但仍納入檢定。</p>
+    <p class="sub">每次量測的全部參加者，檢定各風險分類比例在<span id="chisq-by">性別、年齡層</span>之間是否不同。期望次數小於 5 的格子超過 20% 時，以 Fisher 精確檢定為判定依據。為保護隱私，人數少於 <span class="minn"></span> 人的組別不顯示人數，但仍納入檢定。</p>
     <div class="card"><div class="tbl-wrap" id="chisq-table"></div></div>
     <div class="card" style="margin-top:14px" id="s-att"><div style="font-weight:500;margin-bottom:6px">樣本代表性：三次皆參加 vs. 參加兩次者（前測值比較）</div><div class="tbl-wrap" id="att-table"></div><div class="foot" id="att-foot"></div></div>
   </section>
@@ -264,6 +264,8 @@ summary{cursor:pointer;font-weight:500;padding:12px 0;font-size:15px}
 <script>
 (function(){
 const R = JSON.parse(document.getElementById('data').textContent);
+const BY_SEX = R.info.by_sex !== false;
+if (!BY_SEX) { const e = document.getElementById('chisq-by'); if (e) e.textContent = '年齡層'; }
 const PRINT = /[?&]print\b/.test(location.search);
 const C = {teal:'#069494', orange:'#FF8243', pink:'#FFC0CB', yellow:'#FCE883', ink:'#1c2a2e', ink2:'#46565b', muted:'#6f7e82', grid:'#edf0ef', line:'#e3e8e7', axis:'#c9d1cf'};
 const AGE_COLORS = ['#7fcdc8', '#3aaba5', '#069494', '#05706f', '#034b4a'];
@@ -314,8 +316,8 @@ $('ov-tiles').innerHTML = I.waves.map(w => tile(`${w.label}（第 ${w.week} 週�
     + `<tr><td class="name">合計（納入分析）</td><td>${tot}</td><td>100%</td><td></td></tr></tbody></table>`
     + (I.n_excluded ? `<div class="foot">另有 ${I.n_excluded} 人未參加前測或只量測一次，不納入分析。</div>` : '');
   const cell = v => v == null ? `&lt;${MIN}` : v;
-  let h = '<table><thead><tr><th>性別</th>' + AG.map(a => `<th>${ageShort(a)}</th>`).join('') + '<th>合計</th></tr></thead><tbody>';
-  for (const [k, lab] of [['sex:M', '男性'], ['sex:F', '女性']]) h += `<tr><td class="name">${lab}</td>` + AG.map(a => `<td>${cell(R.strata[`${k}|age:${a}`].n)}</td>`).join('') + `<td>${cell(R.strata[k].n)}</td></tr>`;
+  let h = `<table><thead><tr><th>${BY_SEX ? '性別' : ''}</th>` + AG.map(a => `<th>${ageShort(a)}</th>`).join('') + '<th>合計</th></tr></thead><tbody>';
+  if (BY_SEX) for (const [k, lab] of [['sex:M', '男性'], ['sex:F', '女性']]) h += `<tr><td class="name">${lab}</td>` + AG.map(a => `<td>${cell(R.strata[`${k}|age:${a}`].n)}</td>`).join('') + `<td>${cell(R.strata[k].n)}</td></tr>`;
   h += '<tr><td class="name">合計</td>' + AG.map(a => `<td>${cell(R.strata['age:' + a].n)}</td>`).join('') + `<td>${R.strata.all.n}</td></tr></tbody></table>`;
   $('ov-comp').innerHTML = h + `<div class="foot">年齡以首次量測年齡分組（歲）。少於 ${MIN} 人的格子以「&lt;${MIN}」表示。</div>`;
   $('ov-log').innerHTML = [...I.cleaning_log, `任一分析人數少於 ${MIN} 人時不呈現統計結果，以保護個人隱私。`, '報告中不含任何可辨識個人之資料。'].map(l => `<li>${esc(l)}</li>`).join('');
@@ -326,7 +328,7 @@ function segBtns(el, opts, key){
   el.innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${state[key] === v}">${l}</button>`).join('');
   el.onclick = e => { const b = e.target.closest('button'); if (!b) return; state[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); render(); };
 }
-segBtns($('f-sex'), [['all', '全部'], ['M', '男性'], ['F', '女性']], 'sex');
+if (BY_SEX) segBtns($('f-sex'), [['all', '全部'], ['M', '男性'], ['F', '女性']], 'sex'); else $('f-sex').parentElement.remove();
 segBtns($('f-age'), [['all', '全部'], ...AG.map(g => [g, ageShort(g)])], 'age');
 const skey = () => state.sex === 'all' && state.age === 'all' ? 'all' : state.sex === 'all' ? 'age:' + state.age : state.age === 'all' ? 'sex:' + state.sex : `sex:${state.sex}|age:${state.age}`;
 
@@ -414,10 +416,17 @@ function strataBlock(groups, chartsEl, tableEl, by){
       + `<td>${it ? pb(it.p_final) : '—'}${it && it.use_gg ? '<sup>GG</sup>' : ''}</td></tr>`; });
   $(tableEl).innerHTML = h + '</tbody></table>';
 }
-$('strata-sub').textContent = `以三次皆參加者分析：各分層的${W.join('→')}平均值與重複測量 ANOVA p 值；「時間 × 分組」交互作用檢定不同性別或年齡層的變化趨勢是否不同（混合設計 ANOVA）。本節不受篩選影響。`;
-const sexGroups = [{key: 'sex:M', label: '男性', short: '男', color: C.teal}, {key: 'sex:F', label: '女性', short: '女', color: C.orange}];
-$('lg-sex').innerHTML = legendHTML(['男性', '女性'], [C.teal, C.orange]);
-strataBlock(sexGroups, 'sex-charts', 'strata-sex', 'sex');
+$('strata-sub').textContent = `以三次皆參加者分析：各分層的${W.join('→')}平均值與重複測量 ANOVA p 值；「時間 × 分組」交互作用檢定不同${BY_SEX ? '性別或' : ''}年齡層的變化趨勢是否不同（混合設計 ANOVA）。本節不受篩選影響。`;
+if (BY_SEX) {
+  const sexGroups = [{key: 'sex:M', label: '男性', short: '男', color: C.teal}, {key: 'sex:F', label: '女性', short: '女', color: C.orange}];
+  $('lg-sex').innerHTML = legendHTML(['男性', '女性'], [C.teal, C.orange]);
+  strataBlock(sexGroups, 'sex-charts', 'strata-sex', 'sex');
+} else {
+  $('lg-sex').closest('.card').remove();
+  $('strata-title').textContent = '分層分析：年齡層';
+  $('age-card').style.marginTop = '0';
+  $('age-card').firstElementChild.textContent = '7-1　年齡層';
+}
 const ageGroups = AG.map((g, i) => ({key: 'age:' + g, label: ageLab(g), short: ageShort(g), color: AGE_COLORS[i]})).filter(g => R.strata[g.key].n !== 0);
 $('lg-age').innerHTML = legendHTML(ageGroups.filter(g => R.strata[g.key].rm).map(g => g.label), ageGroups.filter(g => R.strata[g.key].rm).map(g => g.color));
 strataBlock(ageGroups, 'age-charts', 'strata-age', 'age');
@@ -434,10 +443,10 @@ $('age-foot').textContent = `三次皆參加者少於 ${MIN} 人的年齡層不�
   const A = R.attrition;
   let a = `<table><thead><tr><th>變項（單位）</th><th>三次皆參加（n = ${A.n_completed}）</th><th>參加兩次（n = ${A.n_dropped}）</th><th>Welch t p 值</th></tr></thead><tbody>`;
   A.vars.forEach(v => a += `<tr><td class="name">${esc(v.name)}<small>${esc(v.unit)}</small></td><td>${fx(v.m1, 1)} ± ${fx(v.s1, 1)}</td><td>${fx(v.m0, 1)} ± ${fx(v.s0, 1)}</td><td>${pb(v.p)}</td></tr>`);
-  const sx = A.sex, pS = sx.use_fisher ? sx.p_fisher : sx.p, o = sx.observed;
-  a += `<tr><td class="name">男性比例</td><td>${(100 * o[0][0] / (o[0][0] + o[1][0])).toFixed(1)}%</td><td>${(100 * o[0][1] / (o[0][1] + o[1][1] || 1)).toFixed(1)}%</td><td>${pb(pS)}（${sx.use_fisher ? 'Fisher' : '卡方'}）</td></tr>`;
+  const sx = A.sex, pS = sx ? (sx.use_fisher ? sx.p_fisher : sx.p) : null, o = sx && sx.observed;
+  if (sx) a += `<tr><td class="name">男性比例</td><td>${(100 * o[0][0] / (o[0][0] + o[1][0])).toFixed(1)}%</td><td>${(100 * o[0][1] / (o[0][1] + o[1][1] || 1)).toFixed(1)}%</td><td>${pb(pS)}（${sx.use_fisher ? 'Fisher' : '卡方'}）</td></tr>`;
   $('att-table').innerHTML = a + '</tbody></table>';
-  $('att-foot').textContent = (pS < 0.05 || A.vars.some(v => v.p < 0.05)) ? '兩組在部分特性上有顯著差異，兩組結果請分開解讀。' : '兩組前測特性無顯著差異。';
+  $('att-foot').textContent = ((pS != null && pS < 0.05) || A.vars.some(v => v.p < 0.05)) ? '兩組在部分特性上有顯著差異，兩組結果請分開解讀。' : '兩組前測特性無顯著差異。';
 }
 
 /* ---------- 9 方法 ---------- */
@@ -449,7 +458,7 @@ $('age-foot').textContent = `三次皆參加者少於 ${MIN} 人的年齡層不�
     ['三次比較', '三次皆參加者以重複測量變異數分析（SPSS GLM Repeated Measures）比較；Mauchly 球形檢定 p < 0.05 時採 Greenhouse-Geisser 校正。效果量為偏 η²。事後兩兩比較採 Bonferroni 校正。Friedman 檢定為無母數參考。'],
     ['兩次參加者', '前測與介入後量測（後測或追蹤測）以配對 t 檢定比較（SPSS T-TEST PAIRS），並以 Wilcoxon 符號等級檢定為無母數參考。'],
     ['分類變項', '風險分類比例：三次皆參加者以 Cochran\'s Q 檢定、兩兩 McNemar 精確檢定（Bonferroni 校正）；參加兩次者以 McNemar 精確檢定比較前測與介入後。各次量測（納入分析者）的組間比例以 Pearson 卡方檢定，期望次數小於 5 的格子超過 20% 時改採 Fisher 精確檢定。'],
-    ['分層分析', `性別；年齡層（首次量測年齡）分為 30 歲（含）以下、31–40 歲、41–50 歲、51–60 歲、61 歲以上。各分層分別進行重複測量 ANOVA；分組間變化趨勢差異以混合設計 ANOVA 的「時間 × 分組」交互作用檢定。人數少於 ${MIN} 人的分層不呈現結果。`],
+    ['分層分析', `${BY_SEX ? '性別；' : '本職場依需求不做性別分層；'}年齡層（首次量測年齡）分為 30 歲（含）以下、31–40 歲、41–50 歲、51–60 歲、61 歲以上。各分層分別進行重複測量 ANOVA；分組間變化趨勢差異以混合設計 ANOVA 的「時間 × 分組」交互作用檢定。人數少於 ${MIN} 人的分層不呈現結果。`],
     ['顯著水準', 'α = 0.05（雙尾）。* p < 0.05、** p < 0.01、*** p < 0.001。'],
     ['研究限制', '(1) 無對照組，無法排除季節、量測時段、飲食與水分狀態等因素的影響；(2) 生物電阻抗法易受水分、進食與運動影響，小幅變化可能落在量測誤差範圍內；(3) 部分參加者未完成全部量測，主分析人數較少；(4) 同時檢定多項指標，偽陽性機率增加，單一指標的顯著結果宜保守解讀；(5) 未量測腰圍。'],
   ];

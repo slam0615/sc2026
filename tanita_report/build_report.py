@@ -1,7 +1,7 @@
 """產生互動式 HTML 報告（以及 A4 PDF、Excel 驗算檔）。
 
 用法：
-    python build_report.py <GMON匯出.xls> [輸出資料夾] [--name 職場名稱] [--no-pdf] [--no-excel]
+    python build_report.py <GMON匯出.xls> [輸出資料夾] [--name 職場名稱] [--no-pdf] [--no-excel] [--no-sex]
 """
 import json
 import subprocess
@@ -25,7 +25,7 @@ def main():
     src = args[0]
     outdir = Path(args[1]) if len(args) > 1 else HERE / "output"
     outdir.mkdir(parents=True, exist_ok=True)
-    D, res = analyze.run(src, name)
+    D, res = analyze.run(src, name, by_sex="--no-sex" not in flags)
     embed = json.loads(json.dumps(res, default=lambda x: x.item() if hasattr(x, "item") else str(x)))
     for st in embed["strata"].values():
         if st["suppressed"]:

@@ -9,10 +9,11 @@
    `pip install scipy statsmodels xlrd pyreadstat`
 3. 執行：
    `cd tanita_report && python build_report.py <上傳檔路徑> --name <職場名稱>`
+   使用者指定「不用做性別分析」時加 `--no-sex`（只拿掉性別分層、時間 × 性別交互作用、性別卡方，其他不變；體脂率仍依男女標準判定）。
 4. 產出位於 `tanita_report/output/`：
    - `<職場>_成果報告.html`：互動式報告，給職場
    - `<職場>_成果報告_A4.pdf`：列印版，給職場
-   - `<職場>_驗算.xlsx`、`<職場>_驗算_寬格式.sav`、`<職場>_驗算_長格式.sav`、`<職場>_驗算.sps`：**僅供分析人員**，含去識別化的個人資料
+   - `<職場>_驗算.xlsx`（含「趨勢圖」工作表，Excel 原生圖表可直接編輯）、`<職場>_驗算_寬格式.sav`、`<職場>_驗算_長格式.sav`、`<職場>_驗算.sps`：**僅供分析人員**，含去識別化的個人資料
 5. 檢查 Excel：執行 xlsx skill 的 `recalc.py`，確認 `total_errors` 為 0，且所有「差異」欄小於 1e-5。
 6. 檢查報告：看 `results.json` 的 `info.cleaning_log`（量測次數不是 3 次、重複量測、性別或身高不一致、年齡層人數不足、不納入分析的人數），有警告就先回報使用者。另外回報 `info` 的 `n_total`、`n_people`、`n_complete`、`n_two`、`n_excluded`。
 7. 用 SendUserFile 把產出傳給使用者，並提醒雲端環境會被回收，要立即下載。
